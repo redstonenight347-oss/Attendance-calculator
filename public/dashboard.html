@@ -74,14 +74,21 @@
             <nav class="sidebar-nav">
                 <ul>
                     <li><a href="#" class="active" onclick="showSection('dashboard-section', this)">Dashboard</a></li>
-                    <li><a href="#" onclick="showSection('subjects-section', this)">Edit Subjects</a></li>
-                    <li><a href="#" onclick="showSection('timetable-section', this)">Edit Timetable</a></li>
-                    <li><a href="#" onclick="showSection('attendance-section', this)">Edit Attendance</a></li>
+                    <li><a href="#" onclick="showSection('subjects-section', this)">Subjects</a></li>
+                    <li><a href="#" onclick="showSection('timetable-section', this)">Timetable</a></li>
+                    <li><a href="#" onclick="showSection('attendance-section', this)">Attendance</a></li>
                     <li><a href="#" onclick="showSection('help-section', this)">Help</a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                <button class="logout-btn" onclick="logout()">Log Out</button>
+                <div class="theme-toggle-container">
+                    <span>Dark Mode</span>
+                    <label class="switch">
+                        <input type="checkbox" id="theme-toggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <button class="logout-btn" onclick="logout()" style="margin-top: 15px;">Log Out</button>
             </div>
 
         </aside>
@@ -105,14 +112,12 @@
             <!-- Subjects Section -->
             <div id="subjects-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
-                    <h2>Edit Subjects</h2>
+                    <h2>Subjects</h2>
                 </div>
                 <div class="section-container">
                     <h3>Manage Subjects</h3>
                     <div class="timetable-actions top-actions">
-                        <button type="button" class="add-subject-btn" onclick="addSubjectInput()">+ Add Subject</button>
-                        <button type="button" class="delete-all-btn" onclick="deleteAllSubjects()">Delete All
-                            Subjects</button>
+                        <button type="button" class="add-subject-btn" onclick="addSubjectInput()" title="Add Subject">+</button>
                     </div>
                     <div id="subjects-list">
                         <!-- Subject inputs go here -->
@@ -124,7 +129,7 @@
             <!-- Timetable Section -->
             <div id="timetable-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
-                    <h2>Edit Timetable</h2>
+                    <h2>Timetable</h2>
                 </div>
                 <div id="subjects-palette-container" class="section-container">
                     <p>Drag and drop subjects to arrange them.</p>
@@ -134,7 +139,7 @@
                 </div>
 
                 <div id="timetable-builder-container" class="section-container timetable-builder-container">
-                    <h3>Weekly Timetable Builder</h3>
+                    <h3>Timetable Builder</h3>
 
                     <div class="day-switcher">
                         <button type="button" class="day-btn active" onclick="switchDay('Monday')">Mon</button>
@@ -147,8 +152,8 @@
                     </div>
 
                     <div class="timetable-actions top-actions" style="margin-top: 15px; margin-bottom: 15px;">
-                        <button type="button" class="add-subject-btn" onclick="addPeriod()">+ Add Period</button>
-                        <button type="button" class="delete-all-btn" onclick="removePeriod()">- Remove Period</button>
+                        <button type="button" class="add-subject-btn" onclick="addPeriod()" title="Add Period">+</button>
+                        <button type="button" class="delete-all-btn" onclick="removePeriod()" title="Remove Period">-</button>
                     </div>
 
                     <div class="timetable-table-wrapper">
@@ -170,7 +175,7 @@
             <!-- Attendance Section -->
             <div id="attendance-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
-                    <h2>Edit Attendance</h2>
+                    <h2>Attendance</h2>
                 </div>
                 <div class="section-container">
                     <div class="calendar-container">
@@ -201,10 +206,10 @@
                         </div>
                         <p class="instruction-text">Click on a subject to change status</p>
                         <div class="bulk-actions">
-                            <button class="bulk-btn btn-present-mini" onclick="markWholeDay('present')">All Present</button>
-                            <button class="bulk-btn btn-absent-mini" onclick="markWholeDay('absent')">All Absent</button>
-                            <button class="bulk-btn btn-clear-mini" onclick="markWholeDay('holiday')">Holiday/Cancelled</button>
-                            <button class="bulk-btn btn-add-extra" onclick="showAddExtraClassModal()">+ Add Extra Class</button>
+                            <button class="bulk-btn btn-present-mini" onclick="markWholeDay('present')">All P</button>
+                            <button class="bulk-btn btn-absent-mini" onclick="markWholeDay('absent')">All A</button>
+                            <button class="bulk-btn btn-clear-mini" onclick="markWholeDay('holiday')">Holiday</button>
+                            <button class="bulk-btn btn-add-extra" onclick="showAddExtraClassModal()" title="Add Extra Class">+</button>
                         </div>
                         <div id="daySlotsWrapper" class="day-slots-wrapper">
                             <!-- Slots will be generated by JS -->
@@ -216,7 +221,7 @@
             <!-- Profile Section -->
             <div id="profile-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
-                    <h2>Your Profile</h2>
+                    <h2>Profile</h2>
                 </div>
                 <div class="section-container">
                     <h3>Profile Information</h3>
@@ -239,7 +244,7 @@
             <!-- Help Section -->
             <div id="help-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
-                    <h2>Help & Support</h2>
+                    <h2>Help</h2>
                 </div>
                 <div class="section-container">
                     <h3>How to use Attendance Calc</h3>

@@ -140,9 +140,7 @@ export function renderPeriods() {
         if (period.name) {
             slot.textContent = period.name;
             slot.dataset.id = period.id;
-            slot.style.borderStyle = 'solid';
-            slot.style.backgroundColor = '#e8f4f8';
-            slot.style.color = '#2c3e50';
+            slot.classList.add('filled');
         } else {
             slot.textContent = `P${index + 1}`;
         }

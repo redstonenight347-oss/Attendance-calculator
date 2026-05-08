@@ -3,6 +3,30 @@ function toggleAuth() {
     document.getElementById('signup-section').classList.toggle('hidden');
 }
 
+const statusMessages = [
+    "Waking up the server...",
+    "Finding your account...",
+    "Verifying credentials...",
+    "Almost there...",
+    "Establishing secure connection...",
+    "Fetching your data...",
+    "Preparing your dashboard..."
+];
+
+function startStatusRotation(btn, originalText) {
+    let index = 0;
+    btn.innerText = statusMessages[index];
+    const interval = setInterval(() => {
+        index = (index + 1) % statusMessages.length;
+        if (btn.disabled) {
+            btn.innerText = statusMessages[index];
+        } else {
+            clearInterval(interval);
+        }
+    }, 2000);
+    return interval;
+}
+
 async function signinRequest() {
     const email = document.querySelector("#signin-email").value.trim();
     const password = document.querySelector("#signin-password").value.trim();
@@ -18,7 +42,7 @@ async function signinRequest() {
 
     const originalText = btn.innerText;
     btn.disabled = true;
-    btn.innerText = "Signing in...";
+    const interval = startStatusRotation(btn, originalText);
 
     try {
         const post = await fetch("/users/signin", {
@@ -47,6 +71,7 @@ async function signinRequest() {
         console.log("frontend catch")
         output.innerHTML = `<p class="error-text">An error occurred.</p>`;
     } finally {
+        clearInterval(interval);
         btn.disabled = false;
         btn.innerText = originalText;
     }
@@ -74,7 +99,7 @@ async function signupRequest() {
 
     const originalText = btn.innerText;
     btn.disabled = true;
-    btn.innerText = "Signing up...";
+    const interval = startStatusRotation(btn, originalText);
 
     try {
         const post = await fetch("/users/signup", {
@@ -103,19 +128,43 @@ async function signupRequest() {
         console.log("frontend catch")
         output.innerHTML = `<p class="error-text">An error occurred.</p>`;
     } finally {
+        clearInterval(interval);
         btn.disabled = false;
         btn.innerText = originalText;
     }
 }
 
+// Theme initialization
+function initTheme() {
+    const toggle = document.getElementById('theme-toggle');
+    if (!toggle) return;
+
+    const savedTheme = localStorage.getItem('theme');
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+        document.body.classList.add('dark-theme');
+        toggle.checked = true;
+    }
+
+    toggle.addEventListener('change', () => {
+        if (toggle.checked) {
+            document.body.classList.add('dark-theme');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.classList.remove('dark-theme');
+            localStorage.setItem('theme', 'light');
+        }
+    });
+}
+
 // Check for existing session on load
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
     
     if (token && userId) {
-        // Optionally verify token with backend here
-        // For better UX, we just redirect and let the dashboard verify
         window.location.href = "/dashboard.html";
     }
 });

@@ -24,6 +24,7 @@ import {
 } from './modules/calendar.js';
 import { saveProfile, copyUserId } from './modules/profile.js';
 import { verifyTokenApi } from './modules/api.js';
+import { initTheme } from './modules/theme.js';
 
 
 // Expose functions to global scope immediately for HTML onclicks
@@ -86,6 +87,25 @@ async function initialize(userId) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+    initTheme();
+    
+    // Mobile Header Scroll Logic
+    let lastScrollTop = 0;
+    const mobileHeader = document.querySelector('.mobile-header');
+    const mainContent = document.querySelector('.main-content');
+    
+    mainContent.addEventListener('scroll', () => {
+        let scrollTop = mainContent.scrollTop;
+        if (scrollTop > lastScrollTop && scrollTop > 50) {
+            // Scroll Down
+            mobileHeader.classList.add('nav-up');
+        } else {
+            // Scroll Up
+            mobileHeader.classList.remove('nav-up');
+        }
+        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+    }, false);
+
     const userId = getUserId();
     const token = localStorage.getItem('token');
 
