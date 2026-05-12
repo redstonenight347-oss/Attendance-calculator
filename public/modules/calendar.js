@@ -12,6 +12,13 @@ let fetchLogsTimeout = null;
 let isFetchingLogs = false;
 let pendingLogsQueue = []; // Queue for bulk sync
 
+// Global click listener to close attendance slot action overlays when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.attendance-slot')) {
+        document.querySelectorAll('.attendance-slot').forEach(s => s.classList.remove('show-actions'));
+    }
+});
+
 export function initCalendar() {
     const prevBtn = document.getElementById('prevMonth');
     const nextBtn = document.getElementById('nextMonth');
@@ -136,8 +143,26 @@ export function renderCalendar() {
         
         if (dateStr === formatDate(new Date())) dayDiv.classList.add('today');
         if (dateStr === formatDate(selectedDate)) dayDiv.classList.add('selected');
+        if (date.getDay() === 0) dayDiv.classList.add('sunday');
         
         const dayLogs = attendanceLogsCache.filter(l => formatDate(l.date) === dateStr);
+        const markersContainer = document.createElement('div');
+        markersContainer.className = 'day-markers';
+        
+        let hasExtra = dayLogs.some(l => !l.timetable_id);
+        let hasCancelled = dayLogs.some(l => l.status === 'cancelled');
+        
+        // Pending check: if it's a previous day and has periods but NO logs for some periods
+        const isPast = date < new Date(new Date().setHours(0,0,0,0));
+        const dayPeriods = getPeriodsData()[date.toLocaleDateString('en-US', { weekday: 'long' })] || [];
+        const hasPending = isPast && dayPeriods.some(p => p.name && !dayLogs.some(l => Number(l.timetable_id) === Number(p.timetableId)));
+
+        if (hasExtra) markersContainer.innerHTML += '<span class="marker marker-e">E</span>';
+        if (hasCancelled) markersContainer.innerHTML += '<span class="marker marker-c">C</span>';
+        if (hasPending) markersContainer.innerHTML += '<span class="marker marker-p">P</span>';
+        
+        dayDiv.appendChild(markersContainer);
+
         if (dayLogs.length > 0) {
             const hasAbsent = dayLogs.some(l => l.status === 'absent');
             const hasPresent = dayLogs.some(l => l.status === 'present');
@@ -177,11 +202,12 @@ export function renderDayAttendance() {
     const selectedDateStr = formatDate(selectedDate);
     daySubjects.forEach(subject => {
         if (!subject.name) return;
-        const slot = document.createElement('div');
-        slot.className = 'attendance-slot';
         const log = attendanceLogsCache.find(l => formatDate(l.date) === selectedDateStr && Number(l.timetable_id) === Number(subject.timetableId));
         let status = log ? log.status : 'pending';
         if (isFetchingLogs && !log) status = 'loading';
+
+        const slot = document.createElement('div');
+        slot.className = `attendance-slot slot-${status}`;
         slot.innerHTML = `
             <div class="slot-content">
                 <span class="slot-subject-name">${subject.name}</span>
@@ -231,6 +257,11 @@ function renderExtraClasses(selectedDateStr, slotsWrapper) {
             slot.querySelector('.overlay-btn').onclick = (e) => {
                 e.stopPropagation();
                 markAttendance(log.subject_name, 'clear', e, null, log.subject_id);
+            };
+            slot.onclick = () => {
+                const isShowing = slot.classList.contains('show-actions');
+                document.querySelectorAll('.attendance-slot').forEach(s => s.classList.remove('show-actions'));
+                if (!isShowing) slot.classList.add('show-actions');
             };
             slotsWrapper.appendChild(slot);
         });
@@ -304,8 +335,13 @@ export async function markWholeDay(status) {
         const idx = attendanceLogsCache.findIndex(l => formatDate(l.date) === dateStr && Number(l.timetable_id) === Number(newLog.timetableId));
         const oldStatus = idx > -1 ? attendanceLogsCache[idx].status : 'pending';
         
-        if (idx > -1) attendanceLogsCache[idx].status = newLog.status;
-        else attendanceLogsCache.push({ ...newLog, timetable_id: newLog.timetableId, subject_id: newLog.subjectId });
+        if (status === 'clear') {
+            if (idx > -1) attendanceLogsCache.splice(idx, 1);
+        } else if (idx > -1) {
+            attendanceLogsCache[idx].status = newLog.status;
+        } else {
+            attendanceLogsCache.push({ ...newLog, timetable_id: newLog.timetableId, subject_id: newLog.subjectId });
+        }
         
         // Local dashboard update
         if (dashboardCache && oldStatus !== newLog.status) {
@@ -347,11 +383,20 @@ export function openExtraClassModal() {
         select.appendChild(opt);
     });
     modal.style.display = 'flex';
+    // Small timeout to allow display:flex to apply before adding opacity transition
+    setTimeout(() => {
+        modal.classList.add('active');
+    }, 10);
 }
 
 export function closeExtraClassModal() {
     const modal = document.getElementById('extraClassModal');
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300); // Wait for transition
+    }
 }
 
 export async function saveExtraClass() {

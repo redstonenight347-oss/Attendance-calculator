@@ -11,8 +11,7 @@ import {
     initTimetable, 
     populateTimetableGrid, 
     switchDay, 
-    addPeriod, 
-    removePeriod 
+    addPeriod
 } from './modules/timetable.js';
 import { 
     initCalendar, 
@@ -49,7 +48,6 @@ window.addSubjectInput = addSubjectInput;
 window.deleteAllSubjects = deleteAllSubjects;
 window.switchDay = switchDay;
 window.addPeriod = addPeriod;
-window.removePeriod = removePeriod;
 window.saveProfile = saveProfile;
 window.copyUserId = copyUserId;
 window.markAttendance = markAttendance;
