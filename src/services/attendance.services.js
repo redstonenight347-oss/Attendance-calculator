@@ -174,24 +174,34 @@ export async function saveAttendanceLogsService(userId, logs) {
   const uId = parseInt(userId);
 
   for (const log of logs) {
-    const { timetableId, subjectId, date, status } = log;
+    const { id: logId, timetableId, subjectId, date, status } = log;
     
     if (status === 'clear') {
-      const condition = timetableId 
-        ? sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
-        : sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.subjectId} = ${subjectId} AND ${attendanceLogs.timetableId} IS NULL AND ${attendanceLogs.date} = ${date}`;
+      let condition;
+      if (logId && !String(logId).startsWith('temp_')) {
+          condition = eq(attendanceLogs.id, parseInt(logId));
+      } else {
+          condition = timetableId 
+            ? sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
+            : sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.subjectId} = ${subjectId} AND ${attendanceLogs.timetableId} IS NULL AND ${attendanceLogs.date} = ${date} AND ${attendanceLogs.id} = (SELECT id FROM attendance_logs WHERE user_id=${uId} AND subject_id=${subjectId} AND timetable_id IS NULL AND date=${date} LIMIT 1)`;
+      }
       await db.delete(attendanceLogs).where(condition);
       continue;
     }
 
-    const existing = await db.select().from(attendanceLogs).where(
-      timetableId 
-        ? sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
-        : sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.subjectId} = ${subjectId} AND ${attendanceLogs.timetableId} IS NULL AND ${attendanceLogs.date} = ${date}`
-    );
+    let existing = null;
+    if (logId && !String(logId).startsWith('temp_')) {
+        const res = await db.select().from(attendanceLogs).where(eq(attendanceLogs.id, parseInt(logId)));
+        existing = res[0];
+    } else if (timetableId) {
+        const res = await db.select().from(attendanceLogs).where(
+            sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
+        );
+        existing = res[0];
+    }
 
-    if (existing?.[0]) {
-      await db.update(attendanceLogs).set({ status }).where(eq(attendanceLogs.id, existing[0].id));
+    if (existing) {
+      await db.update(attendanceLogs).set({ status }).where(eq(attendanceLogs.id, existing.id));
     } else {
       await db.insert(attendanceLogs).values({ userId: uId, timetableId: timetableId || null, subjectId: subjectId, date, status });
     }

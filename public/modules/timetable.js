@@ -273,7 +273,12 @@ function triggerAutoSave() {
     // OPTIMISTIC UPDATE
     const dashboardCache = Storage.get(userId, 'dashboard');
     if (dashboardCache) {
-        dashboardCache.timetable = JSON.parse(JSON.stringify(periodsData));
+        // Normalize keys to lowercase to match server format
+        const normalizedTimetable = {};
+        for (const day in periodsData) {
+            normalizedTimetable[day.toLowerCase()] = JSON.parse(JSON.stringify(periodsData[day]));
+        }
+        dashboardCache.timetable = normalizedTimetable;
         Storage.save(userId, 'dashboard', dashboardCache);
         if (window.refreshDashboard) window.refreshDashboard(dashboardCache, ['timetable']);
     }

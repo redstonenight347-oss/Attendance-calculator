@@ -753,6 +753,7 @@ input:checked + .slider:before {
 }
 
 .period-slot {
+    padding-left: 10px;
     flex: 0 0 110px;
     height: 70px;
     border: 2px dashed var(--border-color);
@@ -1385,7 +1386,7 @@ input:checked + .slider:before {
     overflow: hidden;
     width: 100%;
     box-sizing: border-box;
-    min-height: 64px; /* Desktop height */
+    min-height: 70px; /* Desktop height */
 }
 
 .attendance-slot:hover {
@@ -1465,7 +1466,7 @@ input:checked + .slider:before {
 @media (max-width: 600px) {
     .attendance-slot {
         padding: 0 12px !important;
-        min-height: 48px !important; /* Slightly increased */
+        min-height: 60px !important; /* Slightly increased */
         border-radius: 10px !important;
     }
 

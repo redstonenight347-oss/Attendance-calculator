@@ -22,7 +22,7 @@ async function authenticatedFetch(url, options = {}) {
 }
 
 export async function fetchDashboardData(userId) {
-    const res = await authenticatedFetch(`/${userId}/attendance`);
+    const res = await authenticatedFetch(`/${userId}/attendance?_t=${Date.now()}`);
     if (!res.ok) {
         const data = await res.json();
         throw new Error(data.message || 'Failed to fetch dashboard data');
@@ -51,7 +51,7 @@ export async function saveTimetableApi(userId, timetable) {
 }
 
 export async function fetchMonthlyLogsApi(userId, year, month) {
-    const res = await authenticatedFetch(`/${userId}/attendance/logs?year=${year}&month=${month}`);
+    const res = await authenticatedFetch(`/${userId}/attendance/logs?year=${year}&month=${month}&_t=${Date.now()}`);
     if (!res.ok) throw new Error('Failed to fetch logs');
     return await res.json();
 }

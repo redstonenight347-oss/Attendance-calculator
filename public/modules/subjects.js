@@ -6,6 +6,28 @@ import { debounceSync } from './sync.js';
 export function populateEditSubjects(subjects) {
     const list = document.getElementById('subjects-list');
     if (!list) return;
+
+    const isFocused = list.contains(document.activeElement);
+
+    if (isFocused) {
+        const inputs = list.querySelectorAll('.subject-name-input');
+        inputs.forEach(input => {
+            const idAttr = input.getAttribute('data-id');
+            if (!idAttr || idAttr.startsWith('temp_')) {
+                const dbMatch = subjects.find(s => s.subject_name === input.value.trim());
+                if (dbMatch) {
+                    input.setAttribute('data-id', dbMatch.subject_id);
+                }
+            }
+        });
+        
+        window.cachedSubjects = subjects.map(s => ({
+            id: s.subject_id,
+            name: s.subject_name
+        }));
+        return;
+    }
+
     list.innerHTML = '';
     window.cachedSubjects = [];
     if (!subjects || subjects.length === 0) return;
@@ -36,7 +58,20 @@ export function addSubjectInput(value = '', id = '') {
         <button type="button" class="delete-subject-btn">❌</button>
     `;
     
-    div.querySelector('.delete-subject-btn').addEventListener('click', () => {
+    div.querySelector('.delete-subject-btn').addEventListener('click', async () => {
+        const inputId = div.querySelector('.subject-name-input').getAttribute('data-id');
+        
+        // If it's already saved in the DB, warn the user about cascading deletes
+        if (inputId && !inputId.toString().startsWith('temp_')) {
+            const subjectName = div.querySelector('.subject-name-input').value.trim() || 'this subject';
+            const message = `Warning: Deleting "${subjectName}" will also permanently delete all its associated attendance logs and timetable periods from the database. Are you sure?`;
+            
+            const confirmed = await window.customConfirm(message, "Delete Subject", "⚠️");
+            if (!confirmed) {
+                return; // Revert/Abort deletion
+            }
+        }
+        
         div.remove();
         updateSubjectLabels();
         triggerAutoSave();
@@ -61,7 +96,7 @@ export function updateSubjectLabels() {
 }
 
 export async function deleteAllSubjects() {
-    if (await window.customConfirm("Warning: This will clear all subjects. Are you sure?", "Clear All Subjects", "⚠️")) {
+    if (await window.customConfirm("Warning: This will clear all subjects and permanently delete all associated attendance logs and timetable data. Are you sure?", "Clear All Subjects", "⚠️")) {
         const list = document.getElementById('subjects-list');
         if (list) {
             list.innerHTML = '';
@@ -75,10 +110,14 @@ function triggerAutoSave() {
     const subjects = [];
     inputs.forEach(input => {
         let val = input.value.trim();
-        const id = input.getAttribute('data-id');
+        let id = input.getAttribute('data-id');
         if (val) {
+            if (!id) {
+                id = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+                input.setAttribute('data-id', id);
+            }
             subjects.push({
-                id: id ? parseInt(id) : null,
+                id: id.startsWith('temp_') ? id : parseInt(id),
                 name: val
             });
         }
@@ -95,22 +134,41 @@ function triggerAutoSave() {
     // OPTIMISTIC UPDATE
     const dashboardCache = Storage.get(userId, 'dashboard');
     if (dashboardCache) {
-        dashboardCache.subjects = subjects.map(s => ({
-            subject_id: s.id,
-            subject_name: s.name,
-            total_classes: 0,
-            attended_classes: 0,
-            attendance_percentage: 0
-        }));
+        dashboardCache.subjects = subjects.map(s => {
+            const existing = dashboardCache.subjects.find(ex => ex.subject_id == s.id || (ex.subject_name === s.name && String(ex.subject_id).startsWith('temp_')));
+            if (existing) {
+                return { ...existing, subject_name: s.name, subject_id: s.id || existing.subject_id };
+            }
+            return {
+                subject_id: s.id,
+                subject_name: s.name,
+                total_classes: 0,
+                attended_classes: 0,
+                attendance_percentage: 0
+            };
+        });
         Storage.save(userId, 'dashboard', dashboardCache);
-        if (window.refreshDashboard) window.refreshDashboard(dashboardCache, ['subjects']);
+        if (window.refreshDashboard) window.refreshDashboard(dashboardCache, ['subjects', 'timetable']);
     }
 
     // Debounced background sync
     debounceSync('subjects', async () => {
-        await saveSubjectsApi(userId, subjects);
-        Storage.save(userId, 'subjects_last_saved', subjects);
+        const latestInputs = document.querySelectorAll('.subject-name-input');
+        const currentSubjectsToSave = [];
+        latestInputs.forEach(input => {
+            let val = input.value.trim();
+            const id = input.getAttribute('data-id');
+            if (val) {
+                currentSubjectsToSave.push({
+                    id: (id && !id.startsWith('temp_')) ? parseInt(id) : null,
+                    name: val
+                });
+            }
+        });
+
+        await saveSubjectsApi(userId, currentSubjectsToSave);
+        Storage.save(userId, 'subjects_last_saved', currentSubjectsToSave);
         // Refresh dashboard once to get real IDs from server if needed
-        if (window.refreshDashboard) window.refreshDashboard();
+        if (window.refreshDashboard) window.refreshDashboard(null, []);
     }, 4000); // 4 second idle time
 }

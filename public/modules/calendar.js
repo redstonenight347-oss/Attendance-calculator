@@ -11,6 +11,7 @@ let attendanceLogsCache = [];
 let fetchLogsTimeout = null;
 let isFetchingLogs = false;
 let pendingLogsQueue = []; // Queue for bulk sync
+let isSyncingAttendance = false; // True while save+fetch cycle is in progress
 
 // Global click listener to close attendance slot action overlays when clicking outside
 document.addEventListener('click', (e) => {
@@ -28,6 +29,12 @@ export function initCalendar() {
     if (prevBtn && !prevBtn.dataset.listener) {
         prevBtn.addEventListener('click', () => {
             currentViewDate.setMonth(currentViewDate.getMonth() - 1);
+            const userId = getUserId();
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth() + 1;
+            const cachedLogs = Storage.get(userId, `logs_${year}_${month}`);
+            if (cachedLogs) attendanceLogsCache = cachedLogs;
+            else attendanceLogsCache = [];
             renderCalendar();
             debouncedFetchLogs();
         });
@@ -37,6 +44,12 @@ export function initCalendar() {
     if (nextBtn && !nextBtn.dataset.listener) {
         nextBtn.addEventListener('click', () => {
             currentViewDate.setMonth(currentViewDate.getMonth() + 1);
+            const userId = getUserId();
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth() + 1;
+            const cachedLogs = Storage.get(userId, `logs_${year}_${month}`);
+            if (cachedLogs) attendanceLogsCache = cachedLogs;
+            else attendanceLogsCache = [];
             renderCalendar();
             debouncedFetchLogs();
         });
@@ -96,15 +109,66 @@ export function debouncedFetchLogs() {
     fetchLogsTimeout = setTimeout(() => fetchMonthlyLogs(), 400);
 }
 
+
+
 async function fetchMonthlyLogs() {
     const userId = getUserId();
 
     if (!userId) return;
+    
+    // If a sync (save+fetch) is already in progress, skip this background fetch.
+    // The sync's own fetchMonthlyLogs call (via _fetchMonthlyLogsInternal) will handle it.
+    if (isSyncingAttendance) {
+        console.log('[Sync] Skipping background fetch — sync in progress');
+        return;
+    }
+    
+    await _fetchMonthlyLogsInternal(userId);
+}
+
+async function _fetchMonthlyLogsInternal(userId) {
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth() + 1;
     isFetchingLogs = true;
     try {
         const freshLogs = await fetchMonthlyLogsApi(userId, year, month);
+        
+        // Merge unsaved pending changes to prevent background fetch from overwriting user edits
+        const protectedLogs = [...pendingLogsQueue];
+        if (protectedLogs.length > 0) {
+            protectedLogs.forEach(pendingLog => {
+                const idx = freshLogs.findIndex(l => {
+                    // Match by real DB id
+                    if (pendingLog.id && !String(pendingLog.id).startsWith('temp_') && l.id === pendingLog.id) return true;
+                    // Match by timetable slot (for regular classes)
+                    if (pendingLog.timetableId && formatDate(l.date) === pendingLog.date && Number(l.timetable_id) === Number(pendingLog.timetableId)) return true;
+                    return false;
+                });
+                
+                if (pendingLog.status === 'clear') {
+                    if (idx > -1) freshLogs.splice(idx, 1);
+                } else if (idx > -1) {
+                    freshLogs[idx].status = pendingLog.status;
+                } else {
+                    // Not found in server data — this is a new entry (likely extra class with temp_ id)
+                    // Only add if it's not already represented (avoid duplicates)
+                    const alreadyAdded = freshLogs.some(l => 
+                        pendingLog.id && l.id === pendingLog.id
+                    );
+                    if (!alreadyAdded) {
+                        freshLogs.push({
+                            id: pendingLog.id || `temp_${Date.now()}`,
+                            date: pendingLog.date,
+                            subject_id: pendingLog.subjectId,
+                            timetable_id: pendingLog.timetableId || null,
+                            status: pendingLog.status,
+                            subject_name: pendingLog.subjectName
+                        });
+                    }
+                }
+            });
+        }
+        
         attendanceLogsCache = freshLogs;
         Storage.save(userId, `logs_${year}_${month}`, freshLogs);
     } catch (err) {
@@ -149,13 +213,23 @@ export function renderCalendar() {
         const markersContainer = document.createElement('div');
         markersContainer.className = 'day-markers';
         
-        let hasExtra = dayLogs.some(l => !l.timetable_id);
-        let hasCancelled = dayLogs.some(l => l.status === 'cancelled');
-        
         // Pending check: if it's a previous day and has periods but NO logs for some periods
         const isPast = date < new Date(new Date().setHours(0,0,0,0));
         const dayPeriods = getPeriodsData()[date.toLocaleDateString('en-US', { weekday: 'long' })] || [];
-        const hasPending = isPast && dayPeriods.some(p => p.name && !dayLogs.some(l => Number(l.timetable_id) === Number(p.timetableId)));
+        
+        // Build set of subject IDs from timetable periods (to distinguish timetable logs from true extra classes)
+        const timetableSubjectIds = new Set(dayPeriods.filter(p => p.name).map(p => Number(p.id)));
+        
+        // Extra = logs without timetable_id that also don't belong to any timetable period's subject
+        let hasExtra = dayLogs.some(l => !l.timetable_id && !timetableSubjectIds.has(Number(l.subject_id)));
+        let hasCancelled = dayLogs.some(l => l.status === 'cancelled');
+        
+        const hasPending = isPast && dayPeriods.some(p => {
+            if (!p.name) return false;
+            if (p.timetableId) return !dayLogs.some(l => Number(l.timetable_id) === Number(p.timetableId));
+            // Unsynced period: check by subject_id
+            return !dayLogs.some(l => Number(l.subject_id) === Number(p.id) && !l.timetable_id);
+        });
 
         if (hasExtra) markersContainer.innerHTML += '<span class="marker marker-e">E</span>';
         if (hasCancelled) markersContainer.innerHTML += '<span class="marker marker-c">C</span>';
@@ -200,9 +274,19 @@ export function renderDayAttendance() {
         return;
     }
     const selectedDateStr = formatDate(selectedDate);
+    const claimedLogIds = new Set(); // Track logs matched to timetable periods
     daySubjects.forEach(subject => {
         if (!subject.name) return;
-        const log = attendanceLogsCache.find(l => formatDate(l.date) === selectedDateStr && Number(l.timetable_id) === Number(subject.timetableId));
+        let log;
+        if (subject.timetableId) {
+            // Synced period — match by timetable_id
+            log = attendanceLogsCache.find(l => formatDate(l.date) === selectedDateStr && Number(l.timetable_id) === Number(subject.timetableId));
+        } else {
+            // Unsynced period (no timetableId yet) — fall back to subject_id + date match
+            // Only match logs that don't have a timetable_id and haven't been claimed already
+            log = attendanceLogsCache.find(l => formatDate(l.date) === selectedDateStr && Number(l.subject_id) === Number(subject.id) && !l.timetable_id && !claimedLogIds.has(l.id));
+        }
+        if (log) claimedLogIds.add(log.id);
         let status = log ? log.status : 'pending';
         if (isFetchingLogs && !log) status = 'loading';
 
@@ -223,7 +307,7 @@ export function renderDayAttendance() {
         slot.querySelectorAll('.overlay-btn').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
-                markAttendance(subject.name, btn.dataset.status, e, subject.timetableId, subject.id);
+                markAttendance(subject.name, btn.dataset.status, e, subject.timetableId || null, subject.id, log ? log.id : null);
             };
         });
         slot.onclick = () => {
@@ -233,11 +317,11 @@ export function renderDayAttendance() {
         };
         slotsWrapper.appendChild(slot);
     });
-    renderExtraClasses(selectedDateStr, slotsWrapper);
+    renderExtraClasses(selectedDateStr, slotsWrapper, claimedLogIds);
 }
 
-function renderExtraClasses(selectedDateStr, slotsWrapper) {
-    const extraLogs = attendanceLogsCache.filter(l => formatDate(l.date) === selectedDateStr && !l.timetable_id);
+function renderExtraClasses(selectedDateStr, slotsWrapper, claimedLogIds = new Set()) {
+    const extraLogs = attendanceLogsCache.filter(l => formatDate(l.date) === selectedDateStr && !l.timetable_id && !claimedLogIds.has(l.id));
     if (extraLogs.length > 0) {
         extraLogs.forEach(log => {
             const slot = document.createElement('div');
@@ -251,13 +335,17 @@ function renderExtraClasses(selectedDateStr, slotsWrapper) {
                     <div class="slot-status-badge status-${log.status}">${log.status}</div>
                 </div>
                 <div class="slot-actions-overlay">
+                    <button class="overlay-btn btn-present-mini" data-status="present">Present</button>
+                    <button class="overlay-btn btn-absent-mini" data-status="absent">Absent</button>
                     <button class="overlay-btn btn-clear-mini" data-status="clear">Remove</button>
                 </div>
             `;
-            slot.querySelector('.overlay-btn').onclick = (e) => {
-                e.stopPropagation();
-                markAttendance(log.subject_name, 'clear', e, null, log.subject_id);
-            };
+            slot.querySelectorAll('.overlay-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    markAttendance(log.subject_name, btn.dataset.status, e, null, log.subject_id, log.id);
+                };
+            });
             slot.onclick = () => {
                 const isShowing = slot.classList.contains('show-actions');
                 document.querySelectorAll('.attendance-slot').forEach(s => s.classList.remove('show-actions'));
@@ -268,15 +356,14 @@ function renderExtraClasses(selectedDateStr, slotsWrapper) {
     }
 }
 
-export async function markAttendance(subjectName, status, event, timetableId, subjectId) {
+export async function markAttendance(subjectName, status, event, timetableId, subjectId, logId = null, isNewExtraClass = false) {
     if (event) event.stopPropagation();
     const userId = getUserId();
     const dateStr = formatDate(selectedDate);
     
     // 1. Find old status for calculations
-    const existingIndex = attendanceLogsCache.findIndex(l => 
-        formatDate(l.date) === dateStr && 
-        (timetableId ? Number(l.timetable_id) === Number(timetableId) : (Number(l.subject_id) === Number(subjectId) && !l.timetable_id))
+    const existingIndex = isNewExtraClass ? -1 : attendanceLogsCache.findIndex(l => 
+        (logId && l.id === logId) || (formatDate(l.date) === dateStr && (timetableId ? Number(l.timetable_id) === Number(timetableId) : false))
     );
     const oldStatus = existingIndex > -1 ? attendanceLogsCache[existingIndex].status : 'pending';
 
@@ -285,8 +372,10 @@ export async function markAttendance(subjectName, status, event, timetableId, su
         if (existingIndex > -1) attendanceLogsCache.splice(existingIndex, 1);
     } else if (existingIndex > -1) {
         attendanceLogsCache[existingIndex].status = status;
+        logId = attendanceLogsCache[existingIndex].id;
     } else {
-        attendanceLogsCache.push({ id: Date.now(), date: dateStr, subject_id: subjectId, timetable_id: timetableId, status, subject_name: subjectName });
+        logId = logId || `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        attendanceLogsCache.push({ id: logId, date: dateStr, subject_id: subjectId, timetable_id: timetableId, status, subject_name: subjectName });
     }
     
     renderCalendar();
@@ -303,20 +392,26 @@ export async function markAttendance(subjectName, status, event, timetableId, su
     }
 
     // 4. Queue for bulk sync
-    const logData = { date: dateStr, subjectId, timetableId, status };
+    const logData = { id: logId, date: dateStr, subjectId, timetableId, status, subjectName };
     const queueIdx = pendingLogsQueue.findIndex(l => 
-        l.date === dateStr && 
-        (timetableId ? l.timetableId === timetableId : (l.subjectId === subjectId && !l.timetableId))
+        (logId && l.id === logId) || (l.date === dateStr && (timetableId ? l.timetableId === timetableId : false))
     );
     if (queueIdx > -1) pendingLogsQueue[queueIdx] = logData;
     else pendingLogsQueue.push(logData);
 
     debounceSync('attendance_queue', async () => {
         const logsToSync = [...pendingLogsQueue];
-        pendingLogsQueue = []; 
-        await saveAttendanceLogApi(userId, logsToSync);
-        await fetchMonthlyLogs();
-        if (window.refreshDashboard) window.refreshDashboard();
+        pendingLogsQueue = [];
+        isSyncingAttendance = true;
+        try {
+            await saveAttendanceLogApi(userId, logsToSync);
+            // Save succeeded — data is now in DB. Fetch will return it with real IDs.
+            // Only pendingLogsQueue (new edits made during save) needs merge protection.
+            await _fetchMonthlyLogsInternal(userId);
+            if (window.refreshDashboard) window.refreshDashboard();
+        } finally {
+            isSyncingAttendance = false;
+        }
     }, 4000); 
 }
 
@@ -324,7 +419,7 @@ export async function markWholeDay(status) {
     const userId = getUserId();
     const dateStr = formatDate(selectedDate);
     const daySubjects = getPeriodsData()[selectedDate.toLocaleDateString('en-US', { weekday: 'long' })] || [];
-    const newLogs = daySubjects.filter(s => s.name).map(s => ({ date: dateStr, subjectId: s.id, timetableId: s.timetableId, status: status === 'holiday' ? 'cancelled' : status }));
+    const newLogs = daySubjects.filter(s => s.name).map(s => ({ date: dateStr, subjectId: s.id, timetableId: s.timetableId, status: status === 'holiday' ? 'cancelled' : status, subjectName: s.name }));
     
     if (newLogs.length === 0) return;
 
@@ -365,9 +460,14 @@ export async function markWholeDay(status) {
     debounceSync('attendance_queue', async () => {
         const logsToSync = [...pendingLogsQueue];
         pendingLogsQueue = [];
-        await saveAttendanceLogApi(userId, logsToSync);
-        await fetchMonthlyLogs();
-        if (window.refreshDashboard) window.refreshDashboard();
+        isSyncingAttendance = true;
+        try {
+            await saveAttendanceLogApi(userId, logsToSync);
+            await _fetchMonthlyLogsInternal(userId);
+            if (window.refreshDashboard) window.refreshDashboard();
+        } finally {
+            isSyncingAttendance = false;
+        }
     }, 4000);
 }
 
@@ -407,6 +507,15 @@ export async function saveExtraClass() {
     const subjectName = select.options[select.selectedIndex].text;
     const status = statusSelect.value;
     if (!subjectId) return;
-    await markAttendance(subjectName, status, null, null, subjectId);
+    await markAttendance(subjectName, status, null, null, subjectId, null, true);
     closeExtraClassModal();
+}
+
+export function updateAttendanceCacheNames(subjects) {
+    attendanceLogsCache.forEach(log => {
+        const match = subjects.find(s => s.subject_id == log.subject_id);
+        if (match) {
+            log.subject_name = match.subject_name;
+        }
+    });
 }

@@ -19,7 +19,9 @@ import {
     markWholeDay,
     openExtraClassModal,
     closeExtraClassModal,
-    saveExtraClass
+    saveExtraClass,
+    renderDayAttendance,
+    updateAttendanceCacheNames
 } from './modules/calendar.js';
 import { saveProfile, copyUserId } from './modules/profile.js';
 import { verifyTokenApi } from './modules/api.js';
@@ -55,6 +57,8 @@ window.markWholeDay = markWholeDay;
 window.showAddExtraClassModal = openExtraClassModal;
 window.closeExtraClassModal = closeExtraClassModal;
 window.saveExtraClass = saveExtraClass;
+window.renderDayAttendance = renderDayAttendance;
+window.updateAttendanceCacheNames = updateAttendanceCacheNames;
 
 window.logout = () => {
     localStorage.removeItem('token');
@@ -167,6 +171,9 @@ function renderDashboardUI(data, skipSections = []) {
     if (!skipSections.includes('timetable')) {
         populateTimetableGrid(data.subjects);
         initTimetable(data.timetable);
+        if (typeof window.renderDayAttendance === 'function') {
+            window.renderDayAttendance();
+        }
     }
 
     // Update User Info
