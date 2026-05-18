@@ -3,7 +3,7 @@ import { getUserId } from './utils.js';
 import { Storage } from './storage.js';
 import { debounceSync } from './sync.js';
 
-let draggedSubjectItem = null;
+
 let currentDay = 'Monday';
 let availableSubjects = [];
 let periodsData = {
@@ -28,81 +28,11 @@ export function initTimetable(timetable) {
     renderPeriods();
 }
 
-export function populateTimetableGrid(subjects) {
+export function setAvailableSubjects(subjects) {
     availableSubjects = subjects || [];
-    const container = document.getElementById('timetable-grid-container');
-    if (!container) return;
-    
-    // On mobile, we might want to hide the palette if we're using the + system
-    // But for now, let's keep it for desktop users.
-    container.innerHTML = '';
-
-    if (!availableSubjects || availableSubjects.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1 / -1; color: #7f8c8d;">No subjects added yet.</p>';
-        return;
-    }
-
-    availableSubjects.forEach(s => {
-        const box = document.createElement('div');
-        box.className = 'draggable-subject';
-        box.draggable = true;
-        box.textContent = s.subject_name;
-        box.dataset.id = s.subject_id;
-        
-        box.addEventListener('dragstart', handleDragStart);
-        box.addEventListener('dragend', handleDragEnd);
-        box.addEventListener('dragover', handleDragOver);
-        box.addEventListener('dragenter', handleDragEnter);
-        box.addEventListener('dragleave', handleDragLeave);
-        box.addEventListener('drop', handleDrop);
-
-        container.appendChild(box);
-    });
 }
 
-function handleDragStart(e) {
-    draggedSubjectItem = this;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', this.textContent);
-    setTimeout(() => this.classList.add('dragging'), 0);
-}
 
-function handleDragOver(e) {
-    if (e.preventDefault) e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    return false;
-}
-
-function handleDragEnter(e) {
-    this.classList.add('over');
-}
-
-function handleDragLeave(e) {
-    this.classList.remove('over');
-}
-
-function handleDrop(e) {
-    if (e.stopPropagation) e.stopPropagation();
-
-    if (draggedSubjectItem !== this) {
-        let tempText = this.textContent;
-        let tempId = this.dataset.id;
-        
-        this.textContent = draggedSubjectItem.textContent;
-        this.dataset.id = draggedSubjectItem.dataset.id;
-        
-        draggedSubjectItem.textContent = tempText;
-        draggedSubjectItem.dataset.id = tempId;
-    }
-    return false;
-}
-
-function handleDragEnd(e) {
-    this.classList.remove('dragging');
-    document.querySelectorAll('.draggable-subject, .period-slot').forEach(item => {
-        item.classList.remove('over');
-    });
-}
 
 export function switchDay(day) {
     currentDay = day;
@@ -171,10 +101,7 @@ export function renderPeriods() {
         // Click to toggle subject picker
         slot.onclick = () => showSubjectPicker(slot, index);
         
-        slot.addEventListener('dragover', handleDragOver);
-        slot.addEventListener('dragenter', handleDragEnter);
-        slot.addEventListener('dragleave', handleDragLeave);
-        slot.addEventListener('drop', handlePeriodDrop);
+
         
         container.appendChild(slot);
     });
@@ -246,22 +173,7 @@ function assignSubjectToPeriod(index, subjectId, subjectName) {
     triggerAutoSave();
 }
 
-function handlePeriodDrop(e) {
-    if (e.stopPropagation) e.stopPropagation();
-    this.classList.remove('over');
-    
-    if (draggedSubjectItem && this.dataset.index !== undefined) {
-        const index = parseInt(this.dataset.index);
-        periodsData[currentDay][index] = {
-            id: parseInt(draggedSubjectItem.dataset.id),
-            name: draggedSubjectItem.textContent
-        };
-        renderPeriods();
-        triggerAutoSave();
-    }
-    draggedSubjectItem = null;
-    return false;
-}
+
 
 function triggerAutoSave() {
     const userId = getUserId();

@@ -183,9 +183,10 @@ body.auth-page {
 /* Dashboard Header */
 .dashboard-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     margin-bottom: 20px;
+    gap: 15px;
 }
 
 .dashboard-header h2 {
@@ -663,50 +664,11 @@ input:checked + .slider:before {
     margin-top: 15px;
 }
 
-.draggable-subject {
-    background-color: var(--container-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    padding: 8px 10px;
-    text-align: center;
-    cursor: grab;
-    user-select: none; /* Disable text selection */
-    box-shadow: var(--shadow);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    font-size: 14px;
-    color: var(--text-primary);
-    transition: transform 0.2s, box-shadow 0.2s;
-    min-height: 50px;
-}
-
-.draggable-subject:active {
-    cursor: grabbing;
-}
-
-.draggable-subject.dragging {
-    opacity: 0.5;
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.draggable-subject.over {
-    border: 2px dashed var(--primary-color);
-    background-color: var(--sidebar-item-hover);
-}
 
 @media (max-width: 768px) {
     .timetable-grid {
-        grid-template-columns: repeat(3, 1fr); /* 3 columns on mobile to keep them small */
+        grid-template-columns: repeat(3, 1fr);
         gap: 8px;
-    }
-    
-    .draggable-subject {
-        font-size: 12px;
-        padding: 6px;
-        min-height: 40px;
     }
 }
 
@@ -841,10 +803,7 @@ input:checked + .slider:before {
     }
 }
 
-.period-slot.over {
-    border-color: var(--primary-color);
-    background-color: var(--sidebar-item-hover);
-}
+
 
 #timetable-builder-container {
     margin-top: 50px !important;
@@ -917,9 +876,7 @@ input:checked + .slider:before {
         padding: 0 40px; /* Space for buttons */
     }
     
-    #subjects-palette-container {
-        display: none; /* Hide drag palette on mobile to save space */
-    }
+
 
     #timetable-builder-container {
         margin-top: 20px !important;
@@ -1049,6 +1006,113 @@ input:checked + .slider:before {
     box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
+/* Info Button Style */
+.info-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    font-size: 18px !important;
+    font-family: 'Georgia', serif !important;
+    font-style: italic !important;
+    font-weight: bold !important;
+    background: #94a3b8 !important; /* Elegant Gray */
+    color: white !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+    vertical-align: middle !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.info-btn:hover {
+    background: #64748b !important; /* Darker Gray */
+    transform: scale(1.1) !important;
+}
+
+.highlight-help {
+    animation: pulse-highlight 2s ease-in-out;
+    background: rgba(52, 152, 219, 0.1) !important;
+    border: 2px solid var(--primary-color) !important;
+    box-shadow: 0 0 20px rgba(52, 152, 219, 0.2) !important;
+}
+
+@keyframes pulse-highlight {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.01); }
+    100% { transform: scale(1); }
+}
+
+/* Dashboard Header adjustments */
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-header.desktop-only {
+        display: flex !important;
+        margin-bottom: 20px;
+    }
+    
+    .dashboard-header h2 {
+        font-size: 1.4rem;
+    }
+}
+
+/* Dark Theme - Custom Modal */
+.dark-theme .custom-modal {
+    background: var(--container-bg);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .modal-title {
+    color: var(--heading-color);
+}
+
+.dark-theme .modal-message {
+    color: var(--text-secondary);
+}
+
+.dark-theme .modal-btn-secondary {
+    background: var(--sidebar-item-hover);
+    color: var(--text-primary);
+}
+
+.dark-theme .modal-btn-secondary:hover {
+    background: var(--border-color);
+}
+
+/* Dark Theme - Warning/Predictor Signs */
+.dark-theme .predictor-warning {
+    background-color: rgba(230, 126, 34, 0.15);
+    color: #f0a45b;
+    border-color: rgba(230, 126, 34, 0.4);
+}
+
+.dark-theme .predictor-safe {
+    background-color: rgba(39, 174, 96, 0.15);
+    color: #4ade80;
+    border-color: rgba(39, 174, 96, 0.4);
+}
+
+.dark-theme .text-danger {
+    color: #f87171;
+}
+
+.dark-theme .text-success {
+    color: #4ade80;
+}
+
+.dark-theme .error-text {
+    color: #f87171;
+}
+
 /* User ID Display Styles */
 .user-id-container {
     display: flex;
@@ -1098,6 +1162,88 @@ input:checked + .slider:before {
     justify-content: center;
     transition: background-color 0.2s;
     border-left: 1px solid #cbd5e1;
+}
+
+/* How to Use Section Styling - Enhanced Spacing */
+.help-guide {
+    line-height: 1.8;
+}
+
+.help-step {
+    margin: 40px 0;
+    padding: 30px;
+    background: #ffffff; /* White card on gray background */
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    border-left: 6px solid var(--primary-color);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.detailed-step {
+    margin: 50px 0;
+    padding: 35px;
+    background: #ffffff;
+}
+
+.help-step h4 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.help-step p {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 17px;
+}
+
+.detailed-help-header {
+    margin-top: 70px;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.dark-theme .help-step, 
+.dark-theme .detailed-step {
+    background: #1e293b; /* Distinct dark background */
+    border-color: #334155;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.dark-theme .help-step p {
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .help-step {
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .detailed-step {
+        margin: 25px 0;
+        padding: 20px;
+    }
+    
+    .detailed-help-header {
+        margin-top: 40px;
+        margin-bottom: 20px;
+    }
+
+    .help-step h4 {
+        font-size: 18px;
+        margin-bottom: 12px;
+    }
+
+    .help-step p {
+        font-size: 15px;
+    }
 }
 
 .copy-btn-inner:hover {

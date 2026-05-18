@@ -9,7 +9,7 @@ import {
 } from './modules/subjects.js';
 import { 
     initTimetable, 
-    populateTimetableGrid, 
+    setAvailableSubjects, 
     switchDay, 
     addPeriod
 } from './modules/timetable.js';
@@ -59,6 +59,21 @@ window.closeExtraClassModal = closeExtraClassModal;
 window.saveExtraClass = saveExtraClass;
 window.renderDayAttendance = renderDayAttendance;
 window.updateAttendanceCacheNames = updateAttendanceCacheNames;
+
+window.openHelp = (target) => {
+    // Find the link for "How to Use" to pass it to showSection for active states
+    const helpLink = document.querySelector('a[onclick*="help-section"]');
+    window.showSection('help-section', helpLink);
+    
+    setTimeout(() => {
+        const element = document.getElementById(`help-${target}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('highlight-help');
+            setTimeout(() => element.classList.remove('highlight-help'), 2000);
+        }
+    }, 100);
+};
 
 window.logout = () => {
     localStorage.removeItem('token');
@@ -169,7 +184,7 @@ function renderDashboardUI(data, skipSections = []) {
     }
     
     if (!skipSections.includes('timetable')) {
-        populateTimetableGrid(data.subjects);
+        setAvailableSubjects(data.subjects);
         initTimetable(data.timetable);
         if (typeof window.renderDayAttendance === 'function') {
             window.renderDayAttendance();

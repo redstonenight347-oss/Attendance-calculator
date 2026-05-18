@@ -77,7 +77,7 @@
                     <li><a href="#" onclick="showSection('subjects-section', this)">Subjects</a></li>
                     <li><a href="#" onclick="showSection('timetable-section', this)">Timetable</a></li>
                     <li><a href="#" onclick="showSection('attendance-section', this)">Attendance</a></li>
-                    <li><a href="#" onclick="showSection('help-section', this)">Help</a></li>
+                    <li><a href="#" onclick="showSection('help-section', this)">How to Use</a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
@@ -103,6 +103,7 @@
             <div id="dashboard-section" class="content-section">
                 <div class="dashboard-header desktop-only">
                     <h2>Your Attendance Dashboard</h2>
+                    <button class="info-btn" onclick="openHelp('dashboard')" title="How to use Dashboard">i</button>
                 </div>
                 <div class="section-container">
                     <div id="output2">Loading attendance...</div>
@@ -113,6 +114,7 @@
             <div id="subjects-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Subjects</h2>
+                    <button class="info-btn" onclick="openHelp('subjects')" title="How to use Subjects">i</button>
                 </div>
                 <div class="section-container">
                     <h3>Manage Subjects</h3>
@@ -130,13 +132,9 @@
             <div id="timetable-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Timetable</h2>
+                    <button class="info-btn" onclick="openHelp('timetable')" title="How to use Timetable">i</button>
                 </div>
-                <div id="subjects-palette-container" class="section-container">
-                    <p>Drag and drop subjects to arrange them.</p>
-                    <div id="timetable-grid-container" class="timetable-grid">
-                        <!-- Draggable subject boxes will go here -->
-                    </div>
-                </div>
+
 
                 <div id="timetable-builder-container" class="section-container timetable-builder-container">
                     <h3>Timetable Builder</h3>
@@ -175,6 +173,7 @@
             <div id="attendance-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Attendance</h2>
+                    <button class="info-btn" onclick="openHelp('attendance')" title="How to use Attendance">i</button>
                 </div>
                 <div class="section-container">
                     <div class="calendar-container">
@@ -222,6 +221,7 @@
             <div id="profile-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Profile</h2>
+                    <button class="info-btn" onclick="openHelp('profile')" title="How to use Profile">i</button>
                 </div>
                 <div class="section-container">
                     <h3>Profile Information</h3>
@@ -241,20 +241,82 @@
                 </div>
             </div>
 
-            <!-- Help Section -->
+            <!-- Help/How to Use Section -->
             <div id="help-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
-                    <h2>Help</h2>
+                    <h2>How to Use</h2>
                 </div>
                 <div class="section-container">
-                    <h3>How to use Attendance Calc</h3>
-                    <p><strong>1. Setup Subjects:</strong> Go to 'Edit Subjects' to add the subjects you're tracking.
-                    </p>
-                    <p><strong>2. Build Timetable:</strong> Drag and drop your subjects into the weekly planner.</p>
-                    <p><strong>3. Track Attendance:</strong> (Coming Soon) Mark yourself present or absent daily.</p>
-                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-                    <h4>Need more help?</h4>
-                    <p>Contact us at: support@attendancecalc.com</p>
+                    <div class="help-guide">
+                        <h3>Simple Guide</h3>
+                        <p>Follow these 3 easy steps to track your attendance!</p>
+                        
+                        <div class="help-step">
+                            <h4>Step 1: Add Your Subjects</h4>
+                            <p>Click on <strong>Subjects</strong> in the menu. Type the name of your class and press the <strong>+</strong> button. Do this for all your classes!</p>
+                        </div>
+
+                        <div class="help-step">
+                            <h4>Step 2: Make Your Timetable</h4>
+                            <p>Click on <strong>Timetable</strong>. You will see empty boxes like P1, P2. Just <strong>tap a box</strong> and pick which subject you have at that time. Do this for every day of the week.</p>
+                        </div>
+
+                        <div class="help-step">
+                            <h4>Step 3: Mark Your Attendance</h4>
+                            <p>Click on <strong>Attendance</strong>. Look at today's list. <strong>Tap the subject</strong> to say if you were there:
+                                <br>• <strong>Green</strong> means you were Present.
+                                <br>• <strong>Red</strong> means you were Absent.
+                            </p>
+                        </div>
+
+                        <div class="detailed-help-header">
+                            <h3>Detailed Menu Guide</h3>
+                        </div>
+
+                        <div id="help-dashboard" class="help-step detailed-step">
+                            <h4>📊 Dashboard</h4>
+                            <p>The Dashboard is your home page. It shows your <strong>Overall Attendance</strong> at the bottom. Each subject has a card showing your percentage. 
+                            <br>• If you see a <strong>Predictor</strong> message, it tells you exactly how many classes you need to attend to stay above 75%.</p>
+                        </div>
+
+                        <div id="help-subjects" class="help-step detailed-step">
+                            <h4>📚 Subjects</h4>
+                            <p>List all your classes here. 
+                            <br>• Click the <strong>Green +</strong> to add a subject.
+                            <br>• Type the name and it saves as you type.
+                            <br>• Use the <strong>Red X</strong> to delete a subject. <em>Warning: This will also delete all attendance for that subject!</em></p>
+                        </div>
+
+                        <div id="help-timetable" class="help-step detailed-step">
+                            <h4>📅 Timetable</h4>
+                            <p>Set up your weekly schedule.
+                            <br>• Use the <strong>Day Buttons</strong> (Mon, Tue...) to switch days.
+                            <br>• Click the <strong>Green +</strong> to add a new period (like P1, P2).
+                            <br>• <strong>Tap a slot</strong> to pick a subject for that period.
+                            <br>• Use the small <strong>X</strong> on a slot to remove it.</p>
+                        </div>
+
+                        <div id="help-attendance" class="help-step detailed-step">
+                            <h4>✅ Attendance</h4>
+                            <p>The place where you record your daily presence.
+                            <br>• <strong>Calendar:</strong> Tap any date to see what you had that day.
+                            <br>• <strong>Marking:</strong> Tap a subject card to change it: Present (Green) or Absent (Red).
+                            <br>• <strong>Bulk Actions:</strong> Use "Mark All Present" to save time if you attended all classes.
+                            <br>• <strong>Extra Class:</strong> Use this if you had a special class that wasn't in your normal timetable.</p>
+                        </div>
+
+                        <div id="help-profile" class="help-step detailed-step">
+                            <h4>👤 Profile</h4>
+                            <p>Manage your account.
+                            <br>• <strong>Name:</strong> Change how your name appears on the dashboard.
+                            <br>• <strong>User ID:</strong> This is your secret code. Keep it safe! You can use it to log in on other phones or computers.</p>
+                        </div>
+
+                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border-color);">
+                        
+                        <h4>Need more help?</h4>
+                        <p>Ask a teacher or send us a message at: support@attendancecalc.com</p>
+                    </div>
                 </div>
             </div>
         </main>
