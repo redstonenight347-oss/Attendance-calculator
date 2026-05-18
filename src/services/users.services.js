@@ -66,10 +66,10 @@ export async function getUserById(id) {
     .where(eq(users.id, parseInt(id)));
 }
 
-export async function updateUser(id, name) {
+export async function updateUser(id, updateData) {
   return await db
     .update(users)
-    .set({ name: name })
+    .set(updateData)
     .where(eq(users.id, parseInt(id)))
     .returning();
 }

@@ -1116,52 +1116,56 @@ input:checked + .slider:before {
 /* User ID Display Styles */
 .user-id-container {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    background-color: #e2e8f0; /* Slightly darker */
-    padding: 8px 15px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
+    justify-content: space-between;
+    background-color: var(--input-bg);
+    padding: 12px;
+    width: calc(100% - 26px);
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
     cursor: pointer;
-    transition: background-color 0.2s;
     position: relative;
-    overflow: hidden;
-    min-height: 38px;
+    box-sizing: content-box;
+    transition: background-color 0.2s, border-color 0.2s;
 }
 
 .user-id-container:hover {
-    background-color: #d1d5db;
+    border-color: var(--primary-color);
 }
 
 .user-id-container span {
     font-family: 'Courier New', Courier, monospace;
     font-size: 15px;
-    color: #334155;
+    color: var(--text-primary);
     word-break: break-all;
-    padding-right: 80px; /* More space for the button */
+    padding-right: 40px;
     font-weight: 600;
 }
 
 .copy-btn-inner {
     position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 0 18px;
-    font-size: 13px;
-    font-weight: bold;
-    cursor: pointer;
-    width: auto !important;
-    min-width: 85px !important;
-    border-radius: 0; /* Container's overflow:hidden will round the right corners */
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: transparent;
+    color: var(--muted-color);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s;
-    border-left: 1px solid #cbd5e1;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.copy-btn-inner:hover {
+    background-color: var(--sidebar-item-hover);
+    border-color: var(--border-color);
+    color: var(--primary-color);
 }
 
 /* How to Use Section Styling - Enhanced Spacing */
@@ -1404,6 +1408,18 @@ input:checked + .slider:before {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+@keyframes intenseGlow {
+    0% { box-shadow: 0 0 5px #8b5cf6, 0 0 10px #8b5cf6; transform: scale(1); }
+    50% { box-shadow: 0 0 20px #8b5cf6, 0 0 30px #8b5cf6; transform: scale(1.05); }
+    100% { box-shadow: 0 0 5px #8b5cf6, 0 0 10px #8b5cf6; transform: scale(1); }
+}
+
+.glow-animation {
+    animation: intenseGlow 1s ease-in-out infinite !important;
+    z-index: 100;
+    position: relative;
 }
 
 .calendar-day:hover:not(.empty) {

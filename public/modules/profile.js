@@ -1,4 +1,4 @@
-import { updateProfileApi } from './api.js';
+import { updateProfileApi, requestPasswordOTPApi, changePasswordWithOTPApi } from './api.js';
 import { getUserId, showToast } from './utils.js';
 import { Storage } from './storage.js';
 
@@ -40,7 +40,7 @@ export async function saveProfile() {
     saveBtn.textContent = "Saving...";
 
     try {
-        await updateProfileApi(userId, newName);
+        await updateProfileApi(userId, { name: newName });
         window.cachedProfileName = newName;
         showToast("Profile updated!");
     } catch (err) {
@@ -75,3 +75,166 @@ export function copyUserId() {
     
     document.body.removeChild(textArea);
 }
+
+export function openChangeEmailModal() {
+    const modal = document.getElementById('changeEmailModal');
+    const input = document.getElementById('new-email-input');
+    if (!modal || !input) return;
+    
+    input.value = '';
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('active');
+        input.focus();
+    }, 10);
+}
+
+export function closeChangeEmailModal() {
+    const modal = document.getElementById('changeEmailModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+export async function confirmChangeEmail(btn) {
+    const userId = getUserId();
+    const input = document.getElementById('new-email-input');
+    const newEmail = input.value.trim();
+    
+    if (!newEmail) {
+        await window.customAlert("Email cannot be empty", "Error", "❌");
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+        await window.customAlert("Please enter a valid email address", "Error", "❌");
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Updating...";
+    }
+
+    try {
+        await updateProfileApi(userId, { email: newEmail });
+        showToast("Email updated successfully!");
+        
+        // Update local cache and display
+        const dashboardCache = Storage.get(userId, 'dashboard');
+        if (dashboardCache && dashboardCache.user) {
+            dashboardCache.user.email = newEmail;
+            Storage.save(userId, 'dashboard', dashboardCache);
+        }
+        
+        const emailDisplay = document.getElementById('profile-email-display');
+        if (emailDisplay) emailDisplay.textContent = newEmail;
+        
+        closeChangeEmailModal();
+    } catch (err) {
+        await window.customAlert(err.message || "Error updating email", "Error", "❌");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Update Email";
+        }
+    }
+}
+
+// Bind to window for HTML access
+window.openChangeEmailModal = openChangeEmailModal;
+window.closeChangeEmailModal = closeChangeEmailModal;
+window.confirmChangeEmail = confirmChangeEmail;
+window.copyUserId = copyUserId;
+
+export function openChangePasswordModal() {
+    const emailDisplay = document.getElementById('profile-email-display');
+    if (!emailDisplay || !emailDisplay.textContent || emailDisplay.textContent === 'Loading...' || !emailDisplay.textContent.includes('@')) {
+        window.customAlert("Please add an email address first to use this feature.", "Error", "❌");
+        return;
+    }
+
+    const modal = document.getElementById('changePasswordModal');
+    if (!modal) return;
+    
+    document.getElementById('password-step-1').style.display = 'block';
+    document.getElementById('password-step-2').style.display = 'none';
+    document.getElementById('password-otp-input').value = '';
+    document.getElementById('new-password-input').value = '';
+    
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('active');
+    }, 10);
+}
+
+export function closeChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+export async function requestPasswordOTP(btn) {
+    const userId = getUserId();
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+    }
+    
+    try {
+        await requestPasswordOTPApi(userId);
+        document.getElementById('password-step-1').style.display = 'none';
+        document.getElementById('password-step-2').style.display = 'block';
+        document.getElementById('password-otp-input').focus();
+    } catch (err) {
+        await window.customAlert(err.message || "Failed to send OTP", "Error", "❌");
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Send OTP";
+        }
+    }
+}
+
+export async function confirmChangePassword(btn) {
+    const userId = getUserId();
+    const otp = document.getElementById('password-otp-input').value.trim();
+    const newPassword = document.getElementById('new-password-input').value.trim();
+    
+    if (!otp || !newPassword) {
+        await window.customAlert("OTP and New Password are required.", "Error", "❌");
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        await window.customAlert("Password must be at least 6 characters.", "Error", "❌");
+        return;
+    }
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Verifying...";
+    }
+    
+    try {
+        await changePasswordWithOTPApi(userId, otp, newPassword);
+        showToast("Password changed successfully!");
+        closeChangePasswordModal();
+    } catch (err) {
+        await window.customAlert(err.message || "Failed to change password", "Error", "❌");
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "Confirm Change";
+        }
+    }
+}
+
+window.openChangePasswordModal = openChangePasswordModal;
+window.closeChangePasswordModal = closeChangePasswordModal;
+window.requestPasswordOTP = requestPasswordOTP;
+window.confirmChangePassword = confirmChangePassword;

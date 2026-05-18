@@ -66,10 +66,10 @@ export async function saveAttendanceLogApi(userId, logs) {
     return data;
 }
 
-export async function updateProfileApi(userId, name) {
+export async function updateProfileApi(userId, updateData) {
     const res = await authenticatedFetch(`/users/${userId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name })
+        body: JSON.stringify(updateData)
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Failed to update profile');
@@ -82,3 +82,22 @@ export async function verifyTokenApi() {
     return await res.json();
 }
 
+export async function requestPasswordOTPApi(userId) {
+    const res = await authenticatedFetch(`/users/${userId}/password/otp`, {
+        method: 'POST',
+        body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to request OTP');
+    return data;
+}
+
+export async function changePasswordWithOTPApi(userId, otp, newPassword) {
+    const res = await authenticatedFetch(`/users/${userId}/password`, {
+        method: 'POST',
+        body: JSON.stringify({ otp, newPassword })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to change password');
+    return data;
+}

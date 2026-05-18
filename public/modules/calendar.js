@@ -1,4 +1,4 @@
-import { fetchMonthlyLogsApi, saveAttendanceLogApi } from './api.js';
+import { fetchMonthlyLogsApi, saveAttendanceLogApi, updateProfileApi } from './api.js';
 import { getUserId, formatDate } from './utils.js';
 import { getPeriodsData } from './timetable.js';
 import { Storage } from './storage.js';
@@ -87,6 +87,15 @@ export function initCalendar() {
     renderCalendar();
     debouncedFetchLogs();
     renderDayAttendance();
+    updateMarkerButton();
+
+    const startMarkerStr = Storage.get(userId, 'start_marker');
+    if (!startMarkerStr && !window.hasAlertedStartMarker) {
+        setTimeout(() => {
+            promptForStartMarker("Welcome! You haven't set a Start Marker. Click 'Set Start Marker Here' on the day you want your attendance tracking to begin.");
+        }, 800);
+        window.hasAlertedStartMarker = true;
+    }
 }
 
 function handleDateChange(oldMonth, oldYear) {
@@ -214,7 +223,13 @@ export function renderCalendar() {
         markersContainer.className = 'day-markers';
         
         // Pending check: if it's a previous day and has periods but NO logs for some periods
-        const isPast = date < new Date(new Date().setHours(0,0,0,0));
+        const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+        const startMarkerDate = startMarkerStr ? new Date(startMarkerStr) : null;
+        if (startMarkerDate) startMarkerDate.setHours(0,0,0,0);
+        const currentDateObj = new Date(date);
+        currentDateObj.setHours(0,0,0,0);
+        const isPast = currentDateObj < new Date(new Date().setHours(0,0,0,0)) && (!startMarkerDate || currentDateObj >= startMarkerDate);
+        
         const dayPeriods = getPeriodsData()[date.toLocaleDateString('en-US', { weekday: 'long' })] || [];
         
         // Build set of subject IDs from timetable periods (to distinguish timetable logs from true extra classes)
@@ -234,6 +249,9 @@ export function renderCalendar() {
         if (hasExtra) markersContainer.innerHTML += '<span class="marker marker-e">E</span>';
         if (hasCancelled) markersContainer.innerHTML += '<span class="marker marker-c">C</span>';
         if (hasPending) markersContainer.innerHTML += '<span class="marker marker-p">P</span>';
+        if (startMarkerStr && startMarkerStr === dateStr) {
+            markersContainer.innerHTML += '<span class="marker marker-s" style="background: #3b82f6; color: white; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; padding: 0;">S</span>';
+        }
         
         dayDiv.appendChild(markersContainer);
 
@@ -253,6 +271,7 @@ export function renderCalendar() {
             selectedDate = new Date(year, month, day);
             renderCalendar();
             renderDayAttendance();
+            updateMarkerButton();
         };
         
         calendarGrid.appendChild(dayDiv);
@@ -275,6 +294,14 @@ export function renderDayAttendance() {
     }
     const selectedDateStr = formatDate(selectedDate);
     const claimedLogIds = new Set(); // Track logs matched to timetable periods
+    
+    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    const startMarkerDate = startMarkerStr ? new Date(startMarkerStr) : null;
+    if (startMarkerDate) startMarkerDate.setHours(0,0,0,0);
+    const selectedDateObj = new Date(selectedDate);
+    selectedDateObj.setHours(0,0,0,0);
+    const isBeforeStartMarker = !startMarkerStr || (startMarkerDate && selectedDateObj < startMarkerDate);
+
     daySubjects.forEach(subject => {
         if (!subject.name) return;
         let log;
@@ -292,40 +319,78 @@ export function renderDayAttendance() {
 
         const slot = document.createElement('div');
         slot.className = `attendance-slot slot-${status}`;
-        slot.innerHTML = `
-            <div class="slot-content">
-                <span class="slot-subject-name">${subject.name}</span>
-                <div class="slot-status-badge status-${status}">${status}</div>
-            </div>
+        
+        let overlayHtml = '';
+        if (!isBeforeStartMarker) {
+            overlayHtml = `
             <div class="slot-actions-overlay">
                 <button class="overlay-btn btn-present-mini" data-status="present">Present</button>
                 <button class="overlay-btn btn-absent-mini" data-status="absent">Absent</button>
                 <button class="overlay-btn btn-cancelled-mini" data-status="cancelled">Cancelled</button>
                 <button class="overlay-btn btn-clear-mini" data-status="clear">Clear</button>
             </div>
+            `;
+        }
+
+        slot.innerHTML = `
+            <div class="slot-content">
+                <span class="slot-subject-name">${subject.name}</span>
+                <div class="slot-status-badge status-${status}">${status}</div>
+            </div>
+            ${overlayHtml}
         `;
-        slot.querySelectorAll('.overlay-btn').forEach(btn => {
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                markAttendance(subject.name, btn.dataset.status, e, subject.timetableId || null, subject.id, log ? log.id : null);
+        
+        if (!isBeforeStartMarker) {
+            slot.querySelectorAll('.overlay-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    markAttendance(subject.name, btn.dataset.status, e, subject.timetableId || null, subject.id, log ? log.id : null);
+                };
+            });
+            slot.onclick = () => {
+                const isShowing = slot.classList.contains('show-actions');
+                document.querySelectorAll('.attendance-slot').forEach(s => s.classList.remove('show-actions'));
+                if (!isShowing) slot.classList.add('show-actions');
             };
-        });
-        slot.onclick = () => {
-            const isShowing = slot.classList.contains('show-actions');
-            document.querySelectorAll('.attendance-slot').forEach(s => s.classList.remove('show-actions'));
-            if (!isShowing) slot.classList.add('show-actions');
-        };
+        } else {
+            slot.style.opacity = '0.6';
+            slot.onclick = () => {
+                if (!startMarkerStr) {
+                    promptForStartMarker();
+                } else if (window.customAlert) {
+                    window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+                }
+            };
+        }
         slotsWrapper.appendChild(slot);
     });
     renderExtraClasses(selectedDateStr, slotsWrapper, claimedLogIds);
 }
 
 function renderExtraClasses(selectedDateStr, slotsWrapper, claimedLogIds = new Set()) {
+    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    const startMarkerDate = startMarkerStr ? new Date(startMarkerStr) : null;
+    if (startMarkerDate) startMarkerDate.setHours(0,0,0,0);
+    const selectedDateObj = new Date(selectedDateStr);
+    selectedDateObj.setHours(0,0,0,0);
+    const isBeforeStartMarker = !startMarkerStr || (startMarkerDate && selectedDateObj < startMarkerDate);
+
     const extraLogs = attendanceLogsCache.filter(l => formatDate(l.date) === selectedDateStr && !l.timetable_id && !claimedLogIds.has(l.id));
     if (extraLogs.length > 0) {
         extraLogs.forEach(log => {
             const slot = document.createElement('div');
             slot.className = 'attendance-slot extra-slot';
+            let overlayHtml = '';
+            if (!isBeforeStartMarker) {
+                overlayHtml = `
+                <div class="slot-actions-overlay">
+                    <button class="overlay-btn btn-present-mini" data-status="present">Present</button>
+                    <button class="overlay-btn btn-absent-mini" data-status="absent">Absent</button>
+                    <button class="overlay-btn btn-clear-mini" data-status="clear">Remove</button>
+                </div>
+                `;
+            }
+
             slot.innerHTML = `
                 <div class="slot-content">
                     <div style="display:flex; flex-direction:column;">
@@ -334,23 +399,31 @@ function renderExtraClasses(selectedDateStr, slotsWrapper, claimedLogIds = new S
                     </div>
                     <div class="slot-status-badge status-${log.status}">${log.status}</div>
                 </div>
-                <div class="slot-actions-overlay">
-                    <button class="overlay-btn btn-present-mini" data-status="present">Present</button>
-                    <button class="overlay-btn btn-absent-mini" data-status="absent">Absent</button>
-                    <button class="overlay-btn btn-clear-mini" data-status="clear">Remove</button>
-                </div>
+                ${overlayHtml}
             `;
-            slot.querySelectorAll('.overlay-btn').forEach(btn => {
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    markAttendance(log.subject_name, btn.dataset.status, e, null, log.subject_id, log.id);
+            
+            if (!isBeforeStartMarker) {
+                slot.querySelectorAll('.overlay-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        markAttendance(log.subject_name, btn.dataset.status, e, null, log.subject_id, log.id);
+                    };
+                });
+                slot.onclick = () => {
+                    const isShowing = slot.classList.contains('show-actions');
+                    document.querySelectorAll('.attendance-slot').forEach(s => s.classList.remove('show-actions'));
+                    if (!isShowing) slot.classList.add('show-actions');
                 };
-            });
-            slot.onclick = () => {
-                const isShowing = slot.classList.contains('show-actions');
-                document.querySelectorAll('.attendance-slot').forEach(s => s.classList.remove('show-actions'));
-                if (!isShowing) slot.classList.add('show-actions');
-            };
+            } else {
+                slot.style.opacity = '0.6';
+                slot.onclick = () => {
+                    if (!startMarkerStr) {
+                        promptForStartMarker();
+                    } else if (window.customAlert) {
+                        window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+                    }
+                };
+            }
             slotsWrapper.appendChild(slot);
         });
     }
@@ -416,6 +489,22 @@ export async function markAttendance(subjectName, status, event, timetableId, su
 }
 
 export async function markWholeDay(status) {
+    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    if (!startMarkerStr) {
+        promptForStartMarker();
+        return;
+    }
+    if (startMarkerStr) {
+        const startMarkerDate = new Date(startMarkerStr);
+        startMarkerDate.setHours(0,0,0,0);
+        const selectedDateObj = new Date(selectedDate);
+        selectedDateObj.setHours(0,0,0,0);
+        if (selectedDateObj < startMarkerDate) {
+            if (window.customAlert) window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+            return;
+        }
+    }
+
     const userId = getUserId();
     const dateStr = formatDate(selectedDate);
     const daySubjects = getPeriodsData()[selectedDate.toLocaleDateString('en-US', { weekday: 'long' })] || [];
@@ -472,6 +561,22 @@ export async function markWholeDay(status) {
 }
 
 export function openExtraClassModal() {
+    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    if (!startMarkerStr) {
+        promptForStartMarker();
+        return;
+    }
+    if (startMarkerStr) {
+        const startMarkerDate = new Date(startMarkerStr);
+        startMarkerDate.setHours(0,0,0,0);
+        const selectedDateObj = new Date(selectedDate);
+        selectedDateObj.setHours(0,0,0,0);
+        if (selectedDateObj < startMarkerDate) {
+            if (window.customAlert) window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+            return;
+        }
+    }
+
     const modal = document.getElementById('extraClassModal');
     const select = document.getElementById('extra-subject-select');
     if (!modal || !select) return;
@@ -519,3 +624,70 @@ export function updateAttendanceCacheNames(subjects) {
         }
     });
 }
+
+export function toggleStartMarker() {
+    const userId = getUserId();
+    const currentMarker = Storage.get(userId, 'start_marker');
+    const selectedDateStr = formatDate(selectedDate);
+    const dashboardCache = Storage.get(userId, 'dashboard');
+
+    if (currentMarker) {
+        Storage.save(userId, 'start_marker', null);
+        if (dashboardCache && dashboardCache.user) {
+            dashboardCache.user.startMarker = null;
+            Storage.save(userId, 'dashboard', dashboardCache);
+        }
+        updateProfileApi(userId, { startMarker: null }).catch(err => console.error("Failed to sync start marker:", err));
+        console.log('Start marker removed');
+    } else {
+        Storage.save(userId, 'start_marker', selectedDateStr);
+        if (dashboardCache && dashboardCache.user) {
+            dashboardCache.user.startMarker = selectedDateStr;
+            Storage.save(userId, 'dashboard', dashboardCache);
+        }
+        updateProfileApi(userId, { startMarker: selectedDateStr }).catch(err => console.error("Failed to sync start marker:", err));
+        console.log('Start marker set to ' + selectedDateStr);
+    }
+    renderCalendar();
+    renderDayAttendance();
+    updateMarkerButton();
+}
+
+export function updateMarkerButton() {
+    const btn = document.getElementById('toggleMarkerBtn');
+    if (!btn) return;
+    const currentMarker = Storage.get(getUserId(), 'start_marker');
+    
+    if (currentMarker) {
+        btn.textContent = `Remove Marker (${currentMarker})`;
+        btn.className = 'bulk-btn btn-cancelled-mini'; // Use existing red button style
+        btn.style.background = '#94a3b8'; // Make it grey when already added
+        btn.style.color = '#fff';
+    } else {
+        btn.textContent = 'Set Start Marker Here';
+        btn.className = 'bulk-btn btn-present-mini'; // Green base
+        btn.style.background = 'linear-gradient(135deg, #3b82f6, #8b5cf6)'; // Vibrant gradient
+        btn.style.color = '#fff';
+    }
+}
+
+export async function promptForStartMarker(customMessage = 'Please set a Start Marker first.') {
+    if (window.customAlert) {
+        await window.customAlert(customMessage, 'Action Required', '⚠️');
+        
+        // Navigate to attendance section
+        const helpLink = document.querySelector('a[onclick*="attendance-section"]');
+        if (window.showSection) window.showSection('attendance-section', helpLink);
+        
+        // Wait a tiny bit for the UI to show
+        setTimeout(() => {
+            const btn = document.getElementById('toggleMarkerBtn');
+            if (btn) {
+                btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                btn.classList.add('glow-animation');
+                setTimeout(() => btn.classList.remove('glow-animation'), 1000);
+            }
+        }, 150);
+    }
+}
+

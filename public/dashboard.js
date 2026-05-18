@@ -21,7 +21,8 @@ import {
     closeExtraClassModal,
     saveExtraClass,
     renderDayAttendance,
-    updateAttendanceCacheNames
+    updateAttendanceCacheNames,
+    toggleStartMarker
 } from './modules/calendar.js';
 import { saveProfile, copyUserId } from './modules/profile.js';
 import { verifyTokenApi } from './modules/api.js';
@@ -59,6 +60,7 @@ window.closeExtraClassModal = closeExtraClassModal;
 window.saveExtraClass = saveExtraClass;
 window.renderDayAttendance = renderDayAttendance;
 window.updateAttendanceCacheNames = updateAttendanceCacheNames;
+window.toggleStartMarker = toggleStartMarker;
 
 window.openHelp = (target) => {
     // Find the link for "How to Use" to pass it to showSection for active states
@@ -95,6 +97,9 @@ async function initialize(userId) {
     // Initial load: Try cache first for instant UI
     const cachedData = Storage.get(userId, 'dashboard');
     if (cachedData) {
+        if (cachedData.user && cachedData.user.startMarker !== undefined) {
+            Storage.save(userId, 'start_marker', cachedData.user.startMarker);
+        }
         renderDashboardUI(cachedData);
         initCalendar(); 
     }
@@ -158,6 +163,11 @@ async function loadDashboardData(userId, showLoading = false) {
 
         Storage.save(userId, 'dashboard', data);
         
+        // Keep start marker in sync from DB
+        if (data.user && data.user.startMarker !== undefined) {
+            Storage.save(userId, 'start_marker', data.user.startMarker);
+        }
+        
         // Initialize Delta-Check markers
         const subjectsForStorage = data.subjects.map(s => ({ id: s.subject_id, name: s.subject_name }));
         Storage.save(userId, 'subjects_last_saved', subjectsForStorage);
@@ -201,6 +211,9 @@ function renderDashboardUI(data, skipSections = []) {
         }
         const profileIdDisplay = document.getElementById('profile-id-display');
         if (profileIdDisplay) profileIdDisplay.textContent = data.user.id;
+        
+        const profileEmailDisplay = document.getElementById('profile-email-display');
+        if (profileEmailDisplay && data.user.email) profileEmailDisplay.textContent = data.user.email;
     }
 }
 
