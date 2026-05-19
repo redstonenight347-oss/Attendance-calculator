@@ -14,16 +14,16 @@ export async function getUser(req, res){
       return res.status(400).json({ message: "*name required"});
     }
 
-    console.log("Name: " + name);
     const user = await getUserByName(name);
 
     if(!user || user.length === 0){
       return res.status(500).json({ message: "failed to get user details" });   
     }
-
     
-    console.log(user[0])
-    res.json(user[0])  
+    const safeUser = { ...user[0] };
+    delete safeUser.password;
+
+    res.json(safeUser);  
   }
   catch (err) {
     console.log(err);
@@ -175,7 +175,10 @@ export async function getUserProfile(req, res) {
       return res.status(404).json({ message: "User not found" });
     }
     
-    res.json(users[0]);
+    const safeUser = { ...users[0] };
+    delete safeUser.password;
+
+    res.json(safeUser);
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Failed to get user profile" });
@@ -226,7 +229,10 @@ export async function updateUserProfile(req, res) {
       sendEmailChangeNotification(email, updatedUsers[0].name).catch(e => console.error("Email error:", e));
     }
 
-    res.json({ message: "Profile updated successfully", user: updatedUsers[0] });
+    const safeUser = { ...updatedUsers[0] };
+    delete safeUser.password;
+
+    res.json({ message: "Profile updated successfully", user: safeUser });
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Failed to update user profile" });

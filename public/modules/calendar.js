@@ -92,11 +92,21 @@ export function initCalendar() {
     const startMarkerStr = Storage.get(userId, 'start_marker');
     if (!startMarkerStr && !window.hasAlertedStartMarker) {
         setTimeout(() => {
-            promptForStartMarker("Welcome! You haven't set a Start Marker. Click 'Set Start Marker Here' on the day you want your attendance tracking to begin.");
-        }, 800);
-        window.hasAlertedStartMarker = true;
+            const freshMarker = Storage.get(getUserId(), 'start_marker');
+            if (!freshMarker && !window.hasAlertedStartMarker) {
+                promptForStartMarker("Welcome! You haven't set a Start Marker. Click 'Set Start Marker Here' on the day you want your attendance tracking to begin.");
+                window.hasAlertedStartMarker = true;
+            }
+        }, 1500);
     }
 }
+
+export function refreshCalendarUI() {
+    renderCalendar();
+    renderDayAttendance();
+    updateMarkerButton();
+}
+window.refreshCalendarUI = refreshCalendarUI;
 
 function handleDateChange(oldMonth, oldYear) {
     const newMonth = selectedDate.getMonth();

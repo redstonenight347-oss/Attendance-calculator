@@ -115,41 +115,43 @@ export async function saveTimetableService(userId, timetableData) {
   clearUserCache(userId);
   const uId = parseInt(userId);
 
-  const existingSlots = await db.select().from(timetable).where(eq(timetable.userId, uId));
-  const incomingData = [];
+  return await db.transaction(async (tx) => {
+    const existingSlots = await tx.select().from(timetable).where(eq(timetable.userId, uId));
+    const incomingData = [];
 
-  for (const day in timetableData) {
-    timetableData[day].forEach((period, index) => {
-      if (period.id) {
-        incomingData.push({
-          userId: uId,
-          subjectId: parseInt(period.id),
-          dayOfWeek: day.toLowerCase(),
-          periodNumber: index + 1
-        });
-      }
-    });
-  }
-
-  const incomingKeys = incomingData.map(d => `${d.dayOfWeek}-${d.periodNumber}`);
-  const toDeleteIds = existingSlots
-    .filter(s => !incomingKeys.includes(`${s.dayOfWeek}-${s.periodNumber}`))
-    .map(s => s.id);
-  
-  if (toDeleteIds.length > 0) {
-    await db.delete(timetable).where(inArray(timetable.id, toDeleteIds));
-  }
-
-  for (const slot of incomingData) {
-    const existing = existingSlots.find(s => s.dayOfWeek === slot.dayOfWeek && s.periodNumber === slot.periodNumber);
-    if (existing) {
-      if (existing.subjectId !== slot.subjectId) {
-        await db.update(timetable).set({ subjectId: slot.subjectId }).where(eq(timetable.id, existing.id));
-      }
-    } else {
-      await db.insert(timetable).values(slot);
+    for (const day in timetableData) {
+      timetableData[day].forEach((period, index) => {
+        if (period.id) {
+          incomingData.push({
+            userId: uId,
+            subjectId: parseInt(period.id),
+            dayOfWeek: day.toLowerCase(),
+            periodNumber: index + 1
+          });
+        }
+      });
     }
-  }
+
+    const incomingKeys = incomingData.map(d => `${d.dayOfWeek}-${d.periodNumber}`);
+    const toDeleteIds = existingSlots
+      .filter(s => !incomingKeys.includes(`${s.dayOfWeek}-${s.periodNumber}`))
+      .map(s => s.id);
+    
+    if (toDeleteIds.length > 0) {
+      await tx.delete(timetable).where(inArray(timetable.id, toDeleteIds));
+    }
+
+    for (const slot of incomingData) {
+      const existing = existingSlots.find(s => s.dayOfWeek === slot.dayOfWeek && s.periodNumber === slot.periodNumber);
+      if (existing) {
+        if (existing.subjectId !== slot.subjectId) {
+          await tx.update(timetable).set({ subjectId: slot.subjectId }).where(eq(timetable.id, existing.id));
+        }
+      } else {
+        await tx.insert(timetable).values(slot);
+      }
+    }
+  });
 }
 
 export async function getMonthlyLogs(userId, year, month) {
@@ -173,37 +175,39 @@ export async function saveAttendanceLogsService(userId, logs) {
   clearUserCache(userId);
   const uId = parseInt(userId);
 
-  for (const log of logs) {
-    const { id: logId, timetableId, subjectId, date, status } = log;
-    
-    if (status === 'clear') {
-      let condition;
-      if (logId && !String(logId).startsWith('temp_')) {
-          condition = eq(attendanceLogs.id, parseInt(logId));
-      } else {
-          condition = timetableId 
-            ? sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
-            : sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.subjectId} = ${subjectId} AND ${attendanceLogs.timetableId} IS NULL AND ${attendanceLogs.date} = ${date} AND ${attendanceLogs.id} = (SELECT id FROM attendance_logs WHERE user_id=${uId} AND subject_id=${subjectId} AND timetable_id IS NULL AND date=${date} LIMIT 1)`;
+  return await db.transaction(async (tx) => {
+    for (const log of logs) {
+      const { id: logId, timetableId, subjectId, date, status } = log;
+      
+      if (status === 'clear') {
+        let condition;
+        if (logId && !String(logId).startsWith('temp_')) {
+            condition = eq(attendanceLogs.id, parseInt(logId));
+        } else {
+            condition = timetableId 
+              ? sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
+              : sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.subjectId} = ${subjectId} AND ${attendanceLogs.timetableId} IS NULL AND ${attendanceLogs.date} = ${date} AND ${attendanceLogs.id} = (SELECT id FROM attendance_logs WHERE user_id=${uId} AND subject_id=${subjectId} AND timetable_id IS NULL AND date=${date} LIMIT 1)`;
+        }
+        await tx.delete(attendanceLogs).where(condition);
+        continue;
       }
-      await db.delete(attendanceLogs).where(condition);
-      continue;
-    }
 
-    let existing = null;
-    if (logId && !String(logId).startsWith('temp_')) {
-        const res = await db.select().from(attendanceLogs).where(eq(attendanceLogs.id, parseInt(logId)));
-        existing = res[0];
-    } else if (timetableId) {
-        const res = await db.select().from(attendanceLogs).where(
-            sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
-        );
-        existing = res[0];
-    }
+      let existing = null;
+      if (logId && !String(logId).startsWith('temp_')) {
+          const res = await tx.select().from(attendanceLogs).where(eq(attendanceLogs.id, parseInt(logId)));
+          existing = res[0];
+      } else if (timetableId) {
+          const res = await tx.select().from(attendanceLogs).where(
+              sql`${attendanceLogs.userId} = ${uId} AND ${attendanceLogs.timetableId} = ${timetableId} AND ${attendanceLogs.date} = ${date}`
+          );
+          existing = res[0];
+      }
 
-    if (existing) {
-      await db.update(attendanceLogs).set({ status }).where(eq(attendanceLogs.id, existing.id));
-    } else {
-      await db.insert(attendanceLogs).values({ userId: uId, timetableId: timetableId || null, subjectId: subjectId, date, status });
+      if (existing) {
+        await tx.update(attendanceLogs).set({ status }).where(eq(attendanceLogs.id, existing.id));
+      } else {
+        await tx.insert(attendanceLogs).values({ userId: uId, timetableId: timetableId || null, subjectId: subjectId, date, status });
+      }
     }
-  }
+  });
 }

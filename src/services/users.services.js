@@ -35,28 +35,30 @@ export async function createUserService(name, email, password) {
 export async function saveSubjectsService(userId, subjectList) {
   clearUserCache(userId);
 
-  const existingSubjects = await db.select().from(subjects).where(eq(subjects.userId, parseInt(userId)));
-  const existingIds = existingSubjects.map(s => s.id);
-  
-  const incomingIds = subjectList.map(s => s.id).filter(id => id != null);
-  const toDeleteIds = existingIds.filter(id => !incomingIds.includes(id));
-  
-  if (toDeleteIds.length > 0) {
-    await db.delete(subjects).where(inArray(subjects.id, toDeleteIds));
-  }
-  
-  for (const sub of subjectList) {
-    if (sub.id && existingIds.includes(sub.id)) {
-      await db.update(subjects)
-        .set({ name: sub.name })
-        .where(eq(subjects.id, sub.id));
-    } else {
-      await db.insert(subjects)
-        .values({ userId: parseInt(userId), name: sub.name })
-        .onConflictDoNothing();
+  return await db.transaction(async (tx) => {
+    const existingSubjects = await tx.select().from(subjects).where(eq(subjects.userId, parseInt(userId)));
+    const existingIds = existingSubjects.map(s => s.id);
+    
+    const incomingIds = subjectList.map(s => s.id).filter(id => id != null);
+    const toDeleteIds = existingIds.filter(id => !incomingIds.includes(id));
+    
+    if (toDeleteIds.length > 0) {
+      await tx.delete(subjects).where(inArray(subjects.id, toDeleteIds));
     }
-  }
-  return true;
+    
+    for (const sub of subjectList) {
+      if (sub.id && existingIds.includes(sub.id)) {
+        await tx.update(subjects)
+          .set({ name: sub.name })
+          .where(eq(subjects.id, sub.id));
+      } else {
+        await tx.insert(subjects)
+          .values({ userId: parseInt(userId), name: sub.name })
+          .onConflictDoNothing();
+      }
+    }
+    return true;
+  });
 }
 
 export async function getUserById(id) {

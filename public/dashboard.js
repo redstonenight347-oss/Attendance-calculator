@@ -176,7 +176,13 @@ async function loadDashboardData(userId, showLoading = false) {
         if (output2 && showLoading) output2.innerHTML = ""; 
         renderDashboardUI(data);
 
-        if (showLoading) initCalendar();
+        if (showLoading) {
+            initCalendar();
+        } else {
+            if (typeof window.refreshCalendarUI === 'function') {
+                window.refreshCalendarUI();
+            }
+        }
     } catch (err) {
         console.error("Dashboard load error:", err);
         if (showLoading && output2) output2.textContent = err.message || "Something went wrong";
