@@ -2,7 +2,7 @@ import express from 'express';
 import { getAttendance, saveTimetable, getAttendanceLogs, saveAttendanceLogs } from "../controllers/attendance.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
-const router = express.Router({ mergeParams: true });
+const router = express.Router();
 
 
 router.use(authMiddleware);

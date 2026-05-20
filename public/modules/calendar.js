@@ -94,7 +94,7 @@ export function initCalendar() {
         setTimeout(() => {
             const freshMarker = Storage.get(getUserId(), 'start_marker');
             if (!freshMarker && !window.hasAlertedStartMarker) {
-                promptForStartMarker("Welcome! You haven't set a Start Marker. Click 'Set Start Marker Here' on the day you want your attendance tracking to begin.");
+                promptForStartMarker("Welcome! You haven't set a Start Marker yet. Choose an option below to get started:");
                 window.hasAlertedStartMarker = true;
             }
         }, 1500);
@@ -150,7 +150,7 @@ async function _fetchMonthlyLogsInternal(userId) {
     const month = currentViewDate.getMonth() + 1;
     isFetchingLogs = true;
     try {
-        const freshLogs = await fetchMonthlyLogsApi(userId, year, month);
+        const freshLogs = await fetchMonthlyLogsApi(year, month);
         
         // Merge unsaved pending changes to prevent background fetch from overwriting user edits
         const protectedLogs = [...pendingLogsQueue];
@@ -345,7 +345,7 @@ export function renderDayAttendance() {
         slot.innerHTML = `
             <div class="slot-content">
                 <span class="slot-subject-name">${subject.name}</span>
-                <div class="slot-status-badge status-${status}">${status}</div>
+                <div class="slot-status-badge status-${status}">${status === 'pending' ? '⚠️ pending' : status}</div>
             </div>
             ${overlayHtml}
         `;
@@ -487,7 +487,7 @@ export async function markAttendance(subjectName, status, event, timetableId, su
         pendingLogsQueue = [];
         isSyncingAttendance = true;
         try {
-            await saveAttendanceLogApi(userId, logsToSync);
+            await saveAttendanceLogApi(logsToSync);
             // Save succeeded — data is now in DB. Fetch will return it with real IDs.
             // Only pendingLogsQueue (new edits made during save) needs merge protection.
             await _fetchMonthlyLogsInternal(userId);
@@ -561,7 +561,7 @@ export async function markWholeDay(status) {
         pendingLogsQueue = [];
         isSyncingAttendance = true;
         try {
-            await saveAttendanceLogApi(userId, logsToSync);
+            await saveAttendanceLogApi(logsToSync);
             await _fetchMonthlyLogsInternal(userId);
             if (window.refreshDashboard) window.refreshDashboard();
         } finally {
@@ -647,7 +647,7 @@ export function toggleStartMarker() {
             dashboardCache.user.startMarker = null;
             Storage.save(userId, 'dashboard', dashboardCache);
         }
-        updateProfileApi(userId, { startMarker: null }).catch(err => console.error("Failed to sync start marker:", err));
+        updateProfileApi({ startMarker: null }).catch(err => console.error("Failed to sync start marker:", err));
         console.log('Start marker removed');
     } else {
         Storage.save(userId, 'start_marker', selectedDateStr);
@@ -655,7 +655,7 @@ export function toggleStartMarker() {
             dashboardCache.user.startMarker = selectedDateStr;
             Storage.save(userId, 'dashboard', dashboardCache);
         }
-        updateProfileApi(userId, { startMarker: selectedDateStr }).catch(err => console.error("Failed to sync start marker:", err));
+        updateProfileApi({ startMarker: selectedDateStr }).catch(err => console.error("Failed to sync start marker:", err));
         console.log('Start marker set to ' + selectedDateStr);
     }
     renderCalendar();
@@ -682,12 +682,63 @@ export function updateMarkerButton() {
 }
 
 export async function promptForStartMarker(customMessage = 'Please set a Start Marker first.') {
-    if (window.customAlert) {
+    if (window.customConfirm) {
+        // Change the options so humans don't have to read long texts:
+        // Option 1 (Cancel/First): "How to Set"
+        // Option 2 (Proceed/Second): "Set Marker"
+        const action = await window.customConfirm(
+            customMessage,
+            'Action Required',
+            '⚠️',
+            'How to Set',
+            'Set Marker'
+        );
+        
+        if (action === false) {
+            // "How to Set" option clicked: Open the How to Use guide and scroll to it with a violet glow!
+            const helpLink = document.querySelector('a[data-section="help-section"]');
+            if (window.showSection) window.showSection('help-section', helpLink);
+            
+            // Wait for section to activate, then scroll & glow the block
+            setTimeout(() => {
+                const el = document.getElementById('help-attendance');
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.style.transition = 'all 0.5s ease';
+                    el.style.boxShadow = '0 0 30px rgba(139, 92, 246, 0.9)';
+                    el.style.borderColor = 'rgba(139, 92, 246, 1)';
+                    setTimeout(() => {
+                        el.style.boxShadow = '';
+                        el.style.borderColor = '';
+                    }, 2000);
+                }
+            }, 250);
+            return;
+        } else {
+            // "Set Marker" option clicked: Navigate to attendance and scroll to the blue button with a blue glow!
+            const attLink = document.querySelector('a[data-section="attendance-section"]');
+            if (window.showSection) window.showSection('attendance-section', attLink);
+            
+            setTimeout(() => {
+                const btn = document.getElementById('toggleMarkerBtn');
+                if (btn) {
+                    btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    btn.style.transition = 'all 0.4s ease';
+                    btn.style.boxShadow = '0 0 35px rgba(59, 130, 246, 0.9)';
+                    btn.style.transform = 'scale(1.06)';
+                    setTimeout(() => {
+                        btn.style.boxShadow = '';
+                        btn.style.transform = '';
+                    }, 1500);
+                }
+            }, 250);
+        }
+    } else if (window.customAlert) {
         await window.customAlert(customMessage, 'Action Required', '⚠️');
         
-        // Navigate to attendance section
-        const helpLink = document.querySelector('a[onclick*="attendance-section"]');
-        if (window.showSection) window.showSection('attendance-section', helpLink);
+        // Default to navigating to the attendance section and highlighting the marker button
+        const attLink = document.querySelector('a[data-section="attendance-section"]');
+        if (window.showSection) window.showSection('attendance-section', attLink);
         
         // Wait a tiny bit for the UI to show
         setTimeout(() => {
@@ -700,4 +751,77 @@ export async function promptForStartMarker(customMessage = 'Please set a Start M
         }, 150);
     }
 }
+
+export function getOldestPendingDate() {
+    const userId = getUserId();
+    const startMarkerStr = Storage.get(userId, 'start_marker');
+    if (!startMarkerStr) return null;
+    const startMarkerDate = new Date(startMarkerStr);
+    startMarkerDate.setHours(0,0,0,0);
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const periodsData = getPeriodsData();
+
+    // Scan backwards from yesterday up to 60 days
+    for (let d = 1; d <= 60; d++) {
+        const checkDate = new Date();
+        checkDate.setDate(today.getDate() - d);
+        checkDate.setHours(0,0,0,0);
+
+        if (checkDate < startMarkerDate) break;
+
+        const dateStr = formatDate(checkDate);
+        const year = checkDate.getFullYear();
+        const month = checkDate.getMonth() + 1;
+        
+        const monthLogs = Storage.get(userId, `logs_${year}_${month}`) || [];
+        const dayLogs = monthLogs.filter(l => formatDate(l.date) === dateStr);
+        
+        const dayName = checkDate.toLocaleDateString('en-US', { weekday: 'long' });
+        const dayPeriods = periodsData[dayName] || [];
+
+        const hasPending = dayPeriods.some(p => {
+            if (!p.name) return false;
+            if (p.timetableId) return !dayLogs.some(l => Number(l.timetable_id) === Number(p.timetableId));
+            return !dayLogs.some(l => Number(l.subject_id) === Number(p.id) && !l.timetable_id);
+        });
+
+        if (hasPending) {
+            return { date: checkDate, dateStr };
+        }
+    }
+    return null;
+}
+
+export function openPendingDate(dateStr) {
+    const targetDate = new Date(dateStr);
+    selectedDate = targetDate;
+    currentViewDate = new Date(targetDate); // Set the calendar view to this month/year too!
+
+    // Fetch the cache or start fresh
+    const userId = getUserId();
+    const year = currentViewDate.getFullYear();
+    const month = currentViewDate.getMonth() + 1;
+    const cachedLogs = Storage.get(userId, `logs_${year}_${month}`);
+    if (cachedLogs) attendanceLogsCache = cachedLogs;
+    else attendanceLogsCache = [];
+
+    // Switch view section to Attendance
+    const attLink = document.querySelector('a[data-section="attendance-section"]');
+    if (attLink && window.showSection) {
+        window.showSection('attendance-section', attLink);
+    }
+
+    renderCalendar();
+    renderDayAttendance();
+    updateMarkerButton();
+    
+    // Fetch logs in background for freshness
+    debouncedFetchLogs();
+}
+
+window.getOldestPendingDate = getOldestPendingDate;
+window.openPendingDate = openPendingDate;
 

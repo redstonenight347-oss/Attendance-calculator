@@ -2,31 +2,53 @@ import express from "express";
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
+import { logger } from './utils/logger.js';
 
 dotenv.config({quiet: true});
 
 // Environment Startup Validation
-const REQUIRED_ENV = ["DATABASE_URL", "JWT_SECRET"];
+const REQUIRED_ENV = ["DATABASE_URL", "JWT_SECRET", "EMAIL_USER", "EMAIL_PASS"];
 for (const envVar of REQUIRED_ENV) {
   if (!process.env[envVar]) {
-    console.error(`CRITICAL STARTUP ERROR: Environment variable "${envVar}" is missing!`);
+    logger.error(`CRITICAL STARTUP ERROR: Environment variable "${envVar}" is missing!`);
     process.exit(1);
   }
 }
 
 import userRoutes from "./routes/users.router.js";
 import attendanceRoutes from "./routes/attendance.router.js";
+import { errorHandler } from "./middleware/error.middleware.js";
 
 const app = express();
 
-// Security Middlewares
 app.use(helmet({
-  contentSecurityPolicy: false, // Turn off CSP so inline styles/scripts in public index/dashboard.html render without strict rules
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      upgradeInsecureRequests: null, // Disable forcing HTTPS on local IP connections
+    },
+  },
+  hsts: false, // Disable HSTS to allow HTTP connections from mobile devices on local networks
   crossOriginEmbedderPolicy: false,
 }));
 
-app.use(express.json());
+app.use(express.json({
+  limit: '100kb'
+}));
 app.use(express.static("public"));
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 // Rate Limiters
 const generalLimiter = rateLimit({
@@ -66,13 +88,16 @@ app.use("/users/signin", authLimiter);
 app.use("/users/signup", signupLimiter);
 app.use("/users/forgot-password/otp", otpLimiter);
 app.use("/users/forgot-password/reset", otpLimiter);
-app.use("/users/:id/password/otp", otpLimiter);
+app.use("/users/me/password/otp", otpLimiter); // Updated to /users/me
 
 // General limiter on other API routes
 app.use("/users", generalLimiter);
-app.use("/:userID/attendance", generalLimiter);
+app.use("/attendance", generalLimiter);
 
 app.use("/users", userRoutes);
-app.use("/:userID/attendance", attendanceRoutes); 
+app.use("/attendance", attendanceRoutes); 
+
+// Centralized error handling middleware
+app.use(errorHandler);
 
 export default app;

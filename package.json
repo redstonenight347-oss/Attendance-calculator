@@ -16,6 +16,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "tsx src/server.js"
+    "dev": "tsx src/server.js",
+    "seed": "tsx src/db/seeds/seed.js"
   }
 }

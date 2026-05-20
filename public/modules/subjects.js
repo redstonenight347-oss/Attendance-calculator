@@ -166,7 +166,7 @@ function triggerAutoSave() {
             }
         });
 
-        await saveSubjectsApi(userId, currentSubjectsToSave);
+        await saveSubjectsApi(currentSubjectsToSave);
         Storage.save(userId, 'subjects_last_saved', currentSubjectsToSave);
         // Refresh dashboard once to get real IDs from server if needed
         if (window.refreshDashboard) window.refreshDashboard(null, []);

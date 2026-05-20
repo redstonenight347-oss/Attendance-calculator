@@ -21,8 +21,8 @@ async function authenticatedFetch(url, options = {}) {
     return response;
 }
 
-export async function fetchDashboardData(userId) {
-    const res = await authenticatedFetch(`/${userId}/attendance?_t=${Date.now()}`);
+export async function fetchDashboardData() {
+    const res = await authenticatedFetch(`/attendance?_t=${Date.now()}`);
     if (!res.ok) {
         const data = await res.json();
         throw new Error(data.message || 'Failed to fetch dashboard data');
@@ -30,8 +30,8 @@ export async function fetchDashboardData(userId) {
     return await res.json();
 }
 
-export async function saveSubjectsApi(userId, subjects) {
-    const res = await authenticatedFetch(`/users/${userId}/subjects`, {
+export async function saveSubjectsApi(subjects) {
+    const res = await authenticatedFetch(`/users/me/subjects`, {
         method: 'POST',
         body: JSON.stringify({ subjects })
     });
@@ -40,8 +40,8 @@ export async function saveSubjectsApi(userId, subjects) {
     return data;
 }
 
-export async function saveTimetableApi(userId, timetable) {
-    const res = await authenticatedFetch(`/${userId}/attendance/timetable`, {
+export async function saveTimetableApi(timetable) {
+    const res = await authenticatedFetch(`/attendance/timetable`, {
         method: 'POST',
         body: JSON.stringify({ timetable })
     });
@@ -50,14 +50,14 @@ export async function saveTimetableApi(userId, timetable) {
     return data;
 }
 
-export async function fetchMonthlyLogsApi(userId, year, month) {
-    const res = await authenticatedFetch(`/${userId}/attendance/logs?year=${year}&month=${month}&_t=${Date.now()}`);
+export async function fetchMonthlyLogsApi(year, month) {
+    const res = await authenticatedFetch(`/attendance/logs?year=${year}&month=${month}&_t=${Date.now()}`);
     if (!res.ok) throw new Error('Failed to fetch logs');
     return await res.json();
 }
 
-export async function saveAttendanceLogApi(userId, logs) {
-    const res = await authenticatedFetch(`/${userId}/attendance/logs`, {
+export async function saveAttendanceLogApi(logs) {
+    const res = await authenticatedFetch(`/attendance/logs`, {
         method: 'POST',
         body: JSON.stringify({ logs })
     });
@@ -66,8 +66,8 @@ export async function saveAttendanceLogApi(userId, logs) {
     return data;
 }
 
-export async function updateProfileApi(userId, updateData) {
-    const res = await authenticatedFetch(`/users/${userId}`, {
+export async function updateProfileApi(updateData) {
+    const res = await authenticatedFetch(`/users/me`, {
         method: 'PATCH',
         body: JSON.stringify(updateData)
     });
@@ -82,8 +82,8 @@ export async function verifyTokenApi() {
     return await res.json();
 }
 
-export async function requestPasswordOTPApi(userId) {
-    const res = await authenticatedFetch(`/users/${userId}/password/otp`, {
+export async function requestPasswordOTPApi() {
+    const res = await authenticatedFetch(`/users/me/password/otp`, {
         method: 'POST',
         body: JSON.stringify({})
     });
@@ -92,8 +92,8 @@ export async function requestPasswordOTPApi(userId) {
     return data;
 }
 
-export async function changePasswordWithOTPApi(userId, otp, newPassword) {
-    const res = await authenticatedFetch(`/users/${userId}/password`, {
+export async function changePasswordWithOTPApi(otp, newPassword) {
+    const res = await authenticatedFetch(`/users/me/password`, {
         method: 'POST',
         body: JSON.stringify({ otp, newPassword })
     });

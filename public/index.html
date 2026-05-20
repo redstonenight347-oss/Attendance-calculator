@@ -18,14 +18,14 @@
         <h2>Sign In</h2>
         <input id="signin-email" type="text" placeholder="Email" autocomplete="username">
         <div style="position: relative; width: 100%; margin-bottom: 15px;">
-            <input id="signin-password" type="text" placeholder="Password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="current-password" onfocus="this.type='password';">
-            <span onclick="togglePasswordVisibility('signin-password', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
+            <input id="signin-password" type="text" placeholder="Password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="current-password">
+            <span id="signin-password-toggle" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
         </div>
         <br>
-        <button type="button" id="signin-btn" onclick="signinRequest()">Sign In</button>
+        <button type="button" id="signin-btn">Sign In</button>
         <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 0.9rem; flex-wrap: wrap; gap: 10px;">
-            <span class="toggle-link" onclick="toggleAuth()" style="margin: 0;">Don't have an account? Sign Up</span>
-            <span class="toggle-link" onclick="showForgotPassword()" style="margin: 0; color: #3b82f6;">Forgot Password?</span>
+            <span class="toggle-link auth-toggle-link" style="margin: 0;">Don't have an account? Sign Up</span>
+            <span class="toggle-link" id="forgot-password-link" style="margin: 0; color: #3b82f6;">Forgot Password?</span>
         </div>
         <div id="signin-output"></div> 
     </div>
@@ -37,7 +37,7 @@
         <div id="forgot-step-1" style="display: block;">
             <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-secondary);">We will send a 6-digit OTP to your email to verify your identity.</p>
             <input id="forgot-email" type="email" placeholder="Registered Email ID" autocomplete="email">
-            <button type="button" id="forgot-otp-btn" onclick="requestForgotPasswordOTP()">Send OTP</button>
+            <button type="button" id="forgot-otp-btn">Send OTP</button>
         </div>
 
         <!-- Step 2: Verify and Reset -->
@@ -49,28 +49,41 @@
             
             <label style="display:block; margin-bottom:5px; text-align: left; font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">New Password <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-left: 5px;">(6 characters minimum)</span></label>
             <div style="position: relative; width: 100%; margin-bottom: 15px;">
-                <input id="forgot-new-password" type="text" placeholder="Enter new password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="new-password" onfocus="this.type='password';">
-                <span onclick="togglePasswordVisibility('forgot-new-password', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
+                <input id="forgot-new-password" type="text" placeholder="Enter new password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="new-password">
+                <span id="forgot-new-password-toggle" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
             </div>
-            <button type="button" id="forgot-reset-btn" onclick="resetPasswordWithOTP()">Confirm Reset</button>
+            <button type="button" id="forgot-reset-btn">Confirm Reset</button>
         </div>
 
-        <span class="toggle-link" onclick="hideForgotPassword()" style="display: block; margin-top: 15px; text-align: center;">Back to Sign In</span>
+        <span class="toggle-link" id="back-to-signin-link" style="display: block; margin-top: 15px; text-align: center;">Back to Sign In</span>
         <div id="forgot-output"></div>
     </div>
 
     <div class="section-container hidden" id="signup-section">
         <h2>Sign Up</h2>
-        <input id="signup-name" type="text" placeholder="Full Name" autocomplete="name">
-        <input id="signup-email" type="text" placeholder="Email" autocomplete="email">
-        <p style="margin-top: -10px; margin-bottom: 15px; font-size: 0.8rem; color: var(--text-secondary); text-align: left; padding-left: 2px;">⚠️ Please use a proper Gmail address so you can receive OTPs and recover your account.</p>
-        <div style="position: relative; width: 100%; margin-bottom: 15px;">
-            <input id="signup-password" type="text" placeholder="Password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="new-password" onfocus="this.type='password';">
-            <span onclick="togglePasswordVisibility('signup-password', this)" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
+        
+        <!-- Step 1: Input details -->
+        <div id="signup-step-1" style="display: block;">
+            <input id="signup-name" type="text" placeholder="Full Name" autocomplete="name">
+            <input id="signup-email" type="text" placeholder="Email" autocomplete="email">
+            <div style="position: relative; width: 100%; margin-bottom: 15px;">
+                <input id="signup-password" type="text" placeholder="Password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="new-password">
+                <span id="signup-password-toggle" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
+            </div>
+            <br>
+            <button type="button" id="signup-btn">Request Verification Code</button>
         </div>
-        <br>
-        <button type="button" id="signup-btn" onclick="signupRequest()">Sign Up</button>
-        <span class="toggle-link" onclick="toggleAuth()">Already have an account? Sign In</span>
+
+        <!-- Step 2: Input OTP -->
+        <div id="signup-step-2" style="display: none;">
+            <p style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 500; color: #4ade80;">Verification OTP sent successfully! Check your email inbox.</p>
+            <label style="display:block; margin-bottom:5px; text-align: left; font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">Enter OTP Code</label>
+            <input id="signup-otp-input" type="text" placeholder="6-digit OTP" style="width: 160px; padding: 12px; border-radius: 5px; border: 1px solid var(--border-color); text-align: center; font-size: 1.1rem; letter-spacing: 2px; font-weight: bold; background-color: var(--input-bg); color: var(--text-primary); margin-bottom: 15px; display: block;" maxlength="6">
+            <button type="button" id="signup-verify-btn">Verify & Sign Up</button>
+            <span class="toggle-link" id="signup-back-link" style="display: block; margin-top: 15px; text-align: center;">Change registration details</span>
+        </div>
+
+        <span class="toggle-link auth-toggle-link" id="signup-login-toggle" style="margin-top: 15px;">Already have an account? Sign In</span>
         <div id="signup-output"></div> 
     </div>
 

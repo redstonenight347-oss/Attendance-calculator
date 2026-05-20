@@ -196,7 +196,7 @@ function triggerAutoSave() {
     }
 
     debounceSync('timetable', async () => {
-        await saveTimetableApi(userId, periodsData);
+        await saveTimetableApi(periodsData);
         Storage.save(userId, 'timetable_last_saved', periodsData);
     }, 4000);
 }

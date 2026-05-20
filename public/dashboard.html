@@ -66,18 +66,17 @@
                 <div class="profile-avatar">👤</div>
                 <div class="profile-info">
                     <p class="profile-name">Student</p>
-                    <p class="profile-role" onclick="showSection('profile-section', null)" style="cursor: pointer;">View
-                        Profile</p>
+                    <p class="profile-role" id="view-profile-link" style="cursor: pointer;">View Profile</p>
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <ul>
-                    <li><a href="#" class="active" onclick="showSection('dashboard-section', this)">Dashboard</a></li>
-                    <li><a href="#" onclick="showSection('subjects-section', this)">Subjects</a></li>
-                    <li><a href="#" onclick="showSection('timetable-section', this)">Timetable</a></li>
-                    <li><a href="#" onclick="showSection('attendance-section', this)">Attendance</a></li>
-                    <li><a href="#" onclick="showSection('help-section', this)">How to Use</a></li>
+                    <li><a href="#" class="active" data-section="dashboard-section">Dashboard</a></li>
+                    <li><a href="#" data-section="subjects-section">Subjects</a></li>
+                    <li><a href="#" data-section="timetable-section">Timetable</a></li>
+                    <li><a href="#" data-section="attendance-section">Attendance</a></li>
+                    <li><a href="#" data-section="help-section">How to Use</a></li>
                 </ul>
             </nav>
             <div class="sidebar-footer">
@@ -88,7 +87,7 @@
                         <span class="slider"></span>
                     </label>
                 </div>
-                <button class="logout-btn" onclick="logout()" style="margin-top: 15px;">Log Out</button>
+                <button class="logout-btn" id="logout-btn" style="margin-top: 15px;">Log Out</button>
             </div>
 
         </aside>
@@ -103,7 +102,7 @@
             <div id="dashboard-section" class="content-section">
                 <div class="dashboard-header desktop-only">
                     <h2>Your Attendance Dashboard</h2>
-                    <button class="info-btn" onclick="openHelp('dashboard')" title="How to use Dashboard">i</button>
+                    <button class="info-btn" data-help="dashboard" title="How to use Dashboard">i</button>
                 </div>
                 <div class="section-container">
                     <div id="output2">Loading attendance...</div>
@@ -114,12 +113,12 @@
             <div id="subjects-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Subjects</h2>
-                    <button class="info-btn" onclick="openHelp('subjects')" title="How to use Subjects">i</button>
+                    <button class="info-btn" data-help="subjects" title="How to use Subjects">i</button>
                 </div>
                 <div class="section-container">
                     <h3>Manage Subjects</h3>
                     <div class="timetable-actions top-actions">
-                        <button type="button" class="add-subject-btn" onclick="addSubjectInput()" title="Add Subject">+</button>
+                        <button type="button" id="add-subject-input-btn" class="add-subject-btn" title="Add Subject">+</button>
                     </div>
                     <div id="subjects-list">
                         <!-- Subject inputs go here -->
@@ -132,7 +131,7 @@
             <div id="timetable-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Timetable</h2>
-                    <button class="info-btn" onclick="openHelp('timetable')" title="How to use Timetable">i</button>
+                    <button class="info-btn" data-help="timetable" title="How to use Timetable">i</button>
                 </div>
 
 
@@ -140,17 +139,17 @@
                     <h3>Timetable Builder</h3>
 
                     <div class="day-switcher">
-                        <button type="button" class="day-btn active" onclick="switchDay('Monday')">Mon</button>
-                        <button type="button" class="day-btn" onclick="switchDay('Tuesday')">Tue</button>
-                        <button type="button" class="day-btn" onclick="switchDay('Wednesday')">Wed</button>
-                        <button type="button" class="day-btn" onclick="switchDay('Thursday')">Thu</button>
-                        <button type="button" class="day-btn" onclick="switchDay('Friday')">Fri</button>
-                        <button type="button" class="day-btn" onclick="switchDay('Saturday')">Sat</button>
-                        <button type="button" class="day-btn" onclick="switchDay('Sunday')">Sun</button>
+                        <button type="button" class="day-btn active" data-day="Monday">Mon</button>
+                        <button type="button" class="day-btn" data-day="Tuesday">Tue</button>
+                        <button type="button" class="day-btn" data-day="Wednesday">Wed</button>
+                        <button type="button" class="day-btn" data-day="Thursday">Thu</button>
+                        <button type="button" class="day-btn" data-day="Friday">Fri</button>
+                        <button type="button" class="day-btn" data-day="Saturday">Sat</button>
+                        <button type="button" class="day-btn" data-day="Sunday">Sun</button>
                     </div>
 
                     <div class="timetable-actions top-actions" style="margin-top: 15px; margin-bottom: 15px;">
-                        <button type="button" class="add-subject-btn" onclick="addPeriod()" title="Add Period">+</button>
+                        <button type="button" id="add-period-btn" class="add-subject-btn" title="Add Period">+</button>
                     </div>
 
                     <div class="timetable-table-wrapper">
@@ -173,7 +172,7 @@
             <div id="attendance-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Attendance</h2>
-                    <button class="info-btn" onclick="openHelp('attendance')" title="How to use Attendance">i</button>
+                    <button class="info-btn" data-help="attendance" title="How to use Attendance">i</button>
                 </div>
                 <div class="section-container">
                     <div class="calendar-container">
@@ -204,12 +203,12 @@
                         </div>
                         <p class="instruction-text">Click on a subject to change status</p>
                         <div class="bulk-actions">
-                            <button class="bulk-btn btn-present-mini" onclick="markWholeDay('present')">Mark All Present</button>
-                            <button class="bulk-btn btn-absent-mini" onclick="markWholeDay('absent')">Mark All Absent</button>
-                            <button class="bulk-btn btn-cancelled-mini" onclick="markWholeDay('holiday')">Holiday</button>
-                            <button class="bulk-btn btn-clear-mini" onclick="markWholeDay('clear')">Clear All Today</button>
-                            <button class="bulk-btn btn-add-extra" onclick="showAddExtraClassModal()">Add Extra Class</button>
-                            <button class="bulk-btn btn-present-mini" id="toggleMarkerBtn" onclick="toggleStartMarker()" style="background: #3b82f6; color: #fff;">Set Start Marker Here</button>
+                            <button class="bulk-btn btn-present-mini" id="bulk-present-btn">Mark All Present</button>
+                            <button class="bulk-btn btn-absent-mini" id="bulk-absent-btn">Mark All Absent</button>
+                            <button class="bulk-btn btn-cancelled-mini" id="bulk-holiday-btn">Holiday</button>
+                            <button class="bulk-btn btn-clear-mini" id="bulk-clear-btn">Clear All Today</button>
+                            <button class="bulk-btn btn-add-extra" id="add-extra-class-btn">Add Extra Class</button>
+                            <button class="bulk-btn btn-present-mini" id="toggleMarkerBtn" style="background: #3b82f6; color: #fff;">Set Start Marker Here</button>
                         </div>
                         <div id="daySlotsWrapper" class="day-slots-wrapper">
                             <!-- Slots will be generated by JS -->
@@ -222,7 +221,7 @@
             <div id="profile-section" class="content-section" style="display: none;">
                 <div class="dashboard-header desktop-only">
                     <h2>Profile</h2>
-                    <button class="info-btn" onclick="openHelp('profile')" title="How to use Profile">i</button>
+                    <button class="info-btn" data-help="profile" title="How to use Profile">i</button>
                 </div>
                 <div class="section-container">
                     <h3>Profile Information</h3>
@@ -233,7 +232,7 @@
                     <div style="margin-bottom: 25px;">
                         <label style="display: block; font-weight: bold; margin-bottom: 8px;">User ID
                             (Read-only)</label>
-                        <div class="user-id-container" onclick="copyUserId()" title="Copy User ID">
+                        <div class="user-id-container" id="copy-user-id-container" title="Copy User ID">
                             <span id="profile-id-display">Loading...</span>
                             <button type="button" class="copy-btn-inner" title="Copy to clipboard">
                                 <svg aria-hidden="true" height="16" viewBox="0 0 16 16" width="16" fill="currentColor">
@@ -249,12 +248,12 @@
                             <span id="profile-email-display">Loading...</span>
                         </div>
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button type="button" class="bulk-btn btn-present-mini" onclick="openChangeEmailModal()" style="width: auto; padding: 8px 16px;">Change Email ID</button>
-                            <button type="button" class="bulk-btn btn-absent-mini" onclick="openChangePasswordModal()" style="width: auto; padding: 8px 16px;">Change Password</button>
+                            <button type="button" id="open-change-email-btn" class="bulk-btn btn-present-mini" style="width: auto; padding: 8px 16px;">Change Email ID</button>
+                            <button type="button" id="open-change-password-btn" class="bulk-btn btn-absent-mini" style="width: auto; padding: 8px 16px;">Change Password</button>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <button type="button" id="save-profile-btn" class="floating-save-btn" onclick="saveProfile()">Save Profile</button>
+                        <button type="button" id="save-profile-btn" class="floating-save-btn">Save Profile</button>
                         <span style="font-size: 0.85rem; color: var(--muted-color); font-style: italic;">* Does not auto save</span>
                     </div>
                 </div>
@@ -370,8 +369,8 @@
                 <input type="email" id="new-email-input" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ddd;" placeholder="Enter new email">
             </div>
             <div class="modal-buttons">
-                <button onclick="closeChangeEmailModal()" class="modal-btn modal-btn-secondary">Cancel</button>
-                <button onclick="confirmChangeEmail(this)" class="modal-btn modal-btn-primary">Update Email</button>
+                <button id="cancel-change-email-btn" class="modal-btn modal-btn-secondary">Cancel</button>
+                <button id="confirm-change-email-btn" class="modal-btn modal-btn-primary">Update Email</button>
             </div>
         </div>
     </div>
@@ -386,8 +385,8 @@
             <div id="password-step-1" style="display: block;">
                 <p style="margin-bottom: 20px; font-size: 0.95rem; color: var(--text-secondary);">We will send a One-Time Password (OTP) to your registered email address to verify your identity.</p>
                 <div class="modal-buttons">
-                    <button type="button" onclick="closeChangePasswordModal()" class="modal-btn modal-btn-secondary">Cancel</button>
-                    <button type="button" onclick="requestPasswordOTP(this)" class="modal-btn modal-btn-primary" id="btn-request-otp">Send OTP</button>
+                    <button type="button" id="cancel-change-password-btn" class="modal-btn modal-btn-secondary">Cancel</button>
+                    <button type="button" class="modal-btn modal-btn-primary" id="btn-request-otp">Send OTP</button>
                 </div>
             </div>
 
@@ -400,12 +399,12 @@
                 <label style="display:block; margin-bottom:5px; font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">New Password <span style="font-size: 0.8rem; color: var(--text-secondary, #888); font-weight: normal; margin-left: 5px;">(6 characters minimum)</span></label>
                 <div style="position: relative; width: 100%;">
                     <input type="password" id="new-password-input" style="width:100%; padding:8px; padding-right:35px; border-radius:4px; border:1px solid #ddd; box-sizing: border-box; display: block;" placeholder="Enter new password">
-                    <span onclick="if(typeof togglePasswordVisibility === 'function') togglePasswordVisibility('new-password-input', this)" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
+                    <span id="new-password-toggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
                 </div>
                 
                 <div class="modal-buttons" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" onclick="closeChangePasswordModal()" class="modal-btn modal-btn-secondary">Cancel</button>
-                    <button type="button" onclick="confirmChangePassword(this)" class="modal-btn modal-btn-primary" id="btn-confirm-password">Confirm Change</button>
+                    <button type="button" id="cancel-change-password-step2-btn" class="modal-btn modal-btn-secondary">Cancel</button>
+                    <button type="button" class="modal-btn modal-btn-primary" id="btn-confirm-password">Confirm Change</button>
                 </div>
             </div>
         </div>
@@ -427,45 +426,11 @@
                 </select>
             </div>
             <div class="modal-buttons">
-                <button onclick="closeExtraClassModal()" class="modal-btn modal-btn-secondary">Cancel</button>
-                <button onclick="saveExtraClass()" class="modal-btn modal-btn-primary">Save</button>
+                <button id="cancel-extra-class-btn" class="modal-btn modal-btn-secondary">Cancel</button>
+                <button id="confirm-extra-class-btn" class="modal-btn modal-btn-primary">Save</button>
             </div>
         </div>
     </div>
-    <script>
-        const sidebar = document.getElementById('sidebar');
-        const openBtn = document.getElementById('openSidebarBtn');
-        const closeBtn = document.getElementById('closeSidebarBtn');
-        const overlay = document.getElementById('sidebarOverlay');
-
-        function openSidebar() {
-            sidebar.classList.add('open');
-            overlay.classList.add('active');
-        }
-
-        function closeSidebar() {
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
-        }
-
-        if (openBtn) openBtn.addEventListener('click', openSidebar);
-        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
-        if (overlay) overlay.addEventListener('click', closeSidebar);
-
-        function togglePasswordVisibility(inputId, icon) {
-            const input = document.getElementById(inputId);
-            if (input) {
-                if (input.type === "password") {
-                    input.type = "text";
-                    icon.textContent = "🙈";
-                } else {
-                    input.type = "password";
-                    icon.textContent = "👁️";
-                }
-            }
-        }
-        window.togglePasswordVisibility = togglePasswordVisibility;
-    </script>
 </body>
 
 </html>

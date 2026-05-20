@@ -1886,3 +1886,44 @@ input:checked + .slider:before {
     to { transform: translateY(0); opacity: 1; }
 }
 
+/* High visibility styles requested by user */
+#view-profile-link {
+    color: #3b82f6 !important; /* Soft premium blue */
+    font-weight: 600 !important;
+    text-shadow: 0 0 1px rgba(59, 130, 246, 0.1);
+    transition: all 0.2s ease;
+}
+
+#view-profile-link:hover {
+    color: #60a5fa !important; /* Lighter hover blue */
+    text-decoration: underline !important;
+}
+
+/* Make the How to Use section link in the sidebar stand out beautifully */
+.sidebar-nav ul li a[data-section="help-section"] {
+    background: rgba(139, 92, 246, 0.08) !important;
+    border: 1px solid rgba(139, 92, 246, 0.25) !important;
+    border-left: 4px solid #8b5cf6 !important;
+    color: #8b5cf6 !important;
+    border-radius: 6px;
+    margin: 5px 15px;
+    padding: 10px 15px;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+}
+
+.sidebar-nav ul li a[data-section="help-section"]:hover {
+    background: rgba(139, 92, 246, 0.15) !important;
+    border-color: rgba(139, 92, 246, 0.4) !important;
+    color: #a78bfa !important;
+    padding-left: 15px !important; /* Override standard pad-left active effect */
+}
+
+/* Active state for How to Use link to keep its styled look */
+.sidebar-nav ul li a[data-section="help-section"].active {
+    background: rgba(139, 92, 246, 0.2) !important;
+    border-color: rgba(139, 92, 246, 0.5) !important;
+    color: #c084fc !important;
+    font-weight: 800 !important;
+}
+

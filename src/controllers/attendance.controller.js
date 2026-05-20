@@ -1,53 +1,35 @@
 import { getDashboardData, saveTimetableService, getMonthlyLogs, saveAttendanceLogsService } from "../services/attendance.services.js";
+import { logger } from "../utils/logger.js";
 
-export async function getAttendance(req, res) {
-  const userID = req.params.userID;
+export async function getAttendance(req, res, next) {
+  const userID = req.user.id; // Secure extraction from token
  
   try {
-    if(!userID || isNaN(userID)){
-      return res.status(400).json({ message: "*proper id required"});
-    }
-
-    console.log("userID: "+userID);
     const data = await getDashboardData(userID);
-    
-    if(!data.subjects || data.subjects.length === 0){
-      return res.status(404).json({ message: "No data found"});
-    }
-        
     res.json(data);
-  }
-  catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Couldn't collect dashboard data"});
+  } catch (err) {
+    next(err);
   }
 }
 
-export async function saveTimetable(req, res) {
-  const userID = req.params.userID;
+export async function saveTimetable(req, res, next) {
+  const userID = req.user.id; // Secure extraction from token
   const { timetable } = req.body;
   
   try {
-    if(!userID || isNaN(userID)){
-      return res.status(400).json({ message: "*proper id required"});
-    }
-    
     await saveTimetableService(userID, timetable);
+    logger.info("Timetable saved successfully", { userId: userID });
     res.json({ message: "Timetable saved successfully" });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Failed to save timetable" });
+    next(err);
   }
 }
 
-export async function getAttendanceLogs(req, res) {
-  const userID = req.params.userID;
+export async function getAttendanceLogs(req, res, next) {
+  const userID = req.user.id; // Secure extraction from token
   const { year, month } = req.query;
 
   try {
-    if (!userID || isNaN(userID)) {
-      return res.status(400).json({ message: "Invalid User ID" });
-    }
     if (!year || !month) {
       return res.status(400).json({ message: "Year and month are required" });
     }
@@ -55,27 +37,23 @@ export async function getAttendanceLogs(req, res) {
     const logs = await getMonthlyLogs(userID, year, month);
     res.json(logs);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to fetch attendance logs" });
+    next(err);
   }
 }
 
-export async function saveAttendanceLogs(req, res) {
-  const userID = req.params.userID;
+export async function saveAttendanceLogs(req, res, next) {
+  const userID = req.user.id; // Secure extraction from token
   const { logs } = req.body;
 
   try {
-    if (!userID || isNaN(userID)) {
-      return res.status(400).json({ message: "Invalid User ID" });
-    }
     if (!logs || !Array.isArray(logs)) {
       return res.status(400).json({ message: "Logs array is required" });
     }
 
     await saveAttendanceLogsService(userID, logs);
+    logger.info("Attendance logs saved successfully", { userId: userID, logCount: logs.length });
     res.json({ message: "Attendance logs saved successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Failed to save attendance logs" });
+    next(err);
   }
 }

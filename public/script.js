@@ -1,6 +1,16 @@
 function toggleAuth() {
     document.getElementById('signin-section').classList.toggle('hidden');
     document.getElementById('signup-section').classList.toggle('hidden');
+    
+    // Reset signup step display states
+    const step1 = document.getElementById('signup-step-1');
+    const step2 = document.getElementById('signup-step-2');
+    if (step1 && step2) {
+        step1.style.display = 'block';
+        step2.style.display = 'none';
+    }
+    const output = document.getElementById('signup-output');
+    if (output) output.textContent = '';
 }
 
 const statusMessages = [
@@ -102,10 +112,59 @@ async function signupRequest() {
     const interval = startStatusRotation(btn, originalText);
 
     try {
-        const post = await fetch("/users/signup", {
+        const post = await fetch("/users/signup/otp", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name: name, email: email, password: password }),
+        });
+
+        const response = await post.json();
+
+        if (!post.ok) {
+            output.innerHTML = `<p class="error-text">${response.message}</p>`;
+        } else {
+            // Go to Step 2
+            document.getElementById('signup-step-1').style.display = 'none';
+            document.getElementById('signup-step-2').style.display = 'block';
+            const otpInput = document.getElementById('signup-otp-input');
+            if (otpInput) otpInput.focus();
+            output.innerHTML = `<p style="color: #4ade80;">${response.message}</p>`;
+        }
+    }
+    catch (err) {
+        console.log("frontend catch");
+        output.innerHTML = `<p class="error-text">An error occurred while sending OTP.</p>`;
+    } finally {
+        clearInterval(interval);
+        btn.disabled = false;
+        btn.innerText = originalText;
+    }
+}
+
+async function signupVerifyRequest() {
+    const name = document.querySelector("#signup-name").value.trim();
+    const email = document.querySelector("#signup-email").value.trim();
+    const password = document.querySelector("#signup-password").value.trim();
+    const otp = document.getElementById("signup-otp-input").value.trim();
+    const output = document.querySelector("#signup-output");
+    const btn = document.getElementById("signup-verify-btn");
+
+    output.textContent = "";
+
+    if (!otp) {
+        output.innerHTML = `<p class="error-text">Please enter the 6-digit OTP code.</p>`;
+        return;
+    }
+
+    const originalText = btn.innerText;
+    btn.disabled = true;
+    const interval = startStatusRotation(btn, originalText);
+
+    try {
+        const post = await fetch("/users/signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email, password, otp }),
         });
 
         const response = await post.json();
@@ -117,16 +176,14 @@ async function signupRequest() {
             localStorage.setItem("token", response.token);
             localStorage.setItem("userId", response.userId);
 
-            output.innerHTML = `<p>${response.message} Redirecting...</p>`;
+            output.innerHTML = `<p style="color: #4ade80;">${response.message} Redirecting...</p>`;
             setTimeout(() => {
                 window.location.href = `/dashboard.html`;
             }, 1000);
         }
-        console.log(response);
     }
     catch (err) {
-        console.log("frontend catch")
-        output.innerHTML = `<p class="error-text">An error occurred.</p>`;
+        output.innerHTML = `<p class="error-text">An error occurred during verification.</p>`;
     } finally {
         clearInterval(interval);
         btn.disabled = false;
@@ -166,6 +223,88 @@ document.addEventListener("DOMContentLoaded", () => {
     
     if (token && userId) {
         window.location.href = "/dashboard.html";
+        return;
+    }
+
+    // Bind sign in / sign up toggle links
+    document.querySelectorAll('.auth-toggle-link').forEach(link => {
+        link.addEventListener('click', toggleAuth);
+    });
+
+    // Bind forgot password links
+    const forgotLink = document.getElementById('forgot-password-link');
+    if (forgotLink) forgotLink.addEventListener('click', showForgotPassword);
+
+    const backToSigninLink = document.getElementById('back-to-signin-link');
+    if (backToSigninLink) backToSigninLink.addEventListener('click', hideForgotPassword);
+
+    // Bind action buttons
+    const signinBtn = document.getElementById('signin-btn');
+    if (signinBtn) signinBtn.addEventListener('click', signinRequest);
+
+    const signupBtn = document.getElementById('signup-btn');
+    if (signupBtn) signupBtn.addEventListener('click', signupRequest);
+
+    const signupVerifyBtn = document.getElementById('signup-verify-btn');
+    if (signupVerifyBtn) signupVerifyBtn.addEventListener('click', signupVerifyRequest);
+
+    const signupBackLink = document.getElementById('signup-back-link');
+    if (signupBackLink) {
+        signupBackLink.addEventListener('click', () => {
+            document.getElementById('signup-step-1').style.display = 'block';
+            document.getElementById('signup-step-2').style.display = 'none';
+            document.getElementById('signup-output').textContent = '';
+        });
+    }
+
+    const forgotOtpBtn = document.getElementById('forgot-otp-btn');
+    if (forgotOtpBtn) forgotOtpBtn.addEventListener('click', requestForgotPasswordOTP);
+
+    const forgotResetBtn = document.getElementById('forgot-reset-btn');
+    if (forgotResetBtn) forgotResetBtn.addEventListener('click', resetPasswordWithOTP);
+
+    // Bind password visibility toggles
+    const signinToggle = document.getElementById('signin-password-toggle');
+    if (signinToggle) {
+        signinToggle.addEventListener('click', (e) => {
+            togglePasswordVisibility('signin-password', signinToggle);
+        });
+    }
+
+    const signupToggle = document.getElementById('signup-password-toggle');
+    if (signupToggle) {
+        signupToggle.addEventListener('click', (e) => {
+            togglePasswordVisibility('signup-password', signupToggle);
+        });
+    }
+
+    const forgotNewToggle = document.getElementById('forgot-new-password-toggle');
+    if (forgotNewToggle) {
+        forgotNewToggle.addEventListener('click', (e) => {
+            togglePasswordVisibility('forgot-new-password', forgotNewToggle);
+        });
+    }
+
+    // Bind input focus behavior to safely transition from text to password type without inline onfocus
+    const signinPassInput = document.getElementById('signin-password');
+    if (signinPassInput) {
+        signinPassInput.addEventListener('focus', function() {
+            this.type = 'password';
+        });
+    }
+
+    const signupPassInput = document.getElementById('signup-password');
+    if (signupPassInput) {
+        signupPassInput.addEventListener('focus', function() {
+            this.type = 'password';
+        });
+    }
+
+    const forgotPassInput = document.getElementById('forgot-new-password');
+    if (forgotPassInput) {
+        forgotPassInput.addEventListener('focus', function() {
+            this.type = 'password';
+        });
     }
 });
 

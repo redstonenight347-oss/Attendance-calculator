@@ -1,5 +1,5 @@
 import express from 'express';
-import { getUser, signup, signin, saveSubjects, getUserProfile, updateUserProfile, verifyToken, changePassword, requestPasswordOTP, forgotPasswordOTP, forgotPasswordReset } from "../controllers/users.controller.js";
+import { getUser, signup, signin, saveSubjects, getUserProfile, updateUserProfile, verifyToken, changePassword, requestPasswordOTP, forgotPasswordOTP, forgotPasswordReset, requestSignupOTP } from "../controllers/users.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.get("/", getUser);
 
+router.post("/signup/otp", requestSignupOTP);
 router.post("/signup", signup);
 router.post("/signin", signin);
 router.get("/verify", authMiddleware, verifyToken);
@@ -14,10 +15,10 @@ router.get("/verify", authMiddleware, verifyToken);
 router.post("/forgot-password/otp", forgotPasswordOTP);
 router.post("/forgot-password/reset", forgotPasswordReset);
 
-router.post("/:id/subjects", authMiddleware, saveSubjects);
-router.get("/:id", authMiddleware, getUserProfile);
-router.patch("/:id", authMiddleware, updateUserProfile);
-router.post("/:id/password/otp", authMiddleware, requestPasswordOTP);
-router.post("/:id/password", authMiddleware, changePassword);
+router.post("/me/subjects", authMiddleware, saveSubjects);
+router.get("/me", authMiddleware, getUserProfile);
+router.patch("/me", authMiddleware, updateUserProfile);
+router.post("/me/password/otp", authMiddleware, requestPasswordOTP);
+router.post("/me/password", authMiddleware, changePassword);
 
 export default router;

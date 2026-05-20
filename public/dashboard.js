@@ -24,7 +24,17 @@ import {
     updateAttendanceCacheNames,
     toggleStartMarker
 } from './modules/calendar.js';
-import { saveProfile, copyUserId } from './modules/profile.js';
+import { 
+    saveProfile, 
+    copyUserId, 
+    openChangeEmailModal, 
+    closeChangeEmailModal, 
+    confirmChangeEmail, 
+    openChangePasswordModal, 
+    closeChangePasswordModal, 
+    requestPasswordOTP, 
+    confirmChangePassword 
+} from './modules/profile.js';
 import { verifyTokenApi } from './modules/api.js';
 import { initTheme } from './modules/theme.js';
 
@@ -108,8 +118,148 @@ async function initialize(userId) {
     loadDashboardData(userId, !cachedData);
 }
 
+function bindDashboardEvents() {
+    // 1. Sidebar Navigation Links
+    document.querySelectorAll('.sidebar-nav a[data-section]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const sectionId = link.getAttribute('data-section');
+            window.showSection(sectionId, link);
+        });
+    });
+
+    // 2. View Profile Link
+    const viewProfileLink = document.getElementById('view-profile-link');
+    if (viewProfileLink) {
+        viewProfileLink.addEventListener('click', () => {
+            window.showSection('profile-section', null);
+        });
+    }
+
+    // 3. Logout Button
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', window.logout);
+    }
+
+    // 4. Info Help Buttons
+    document.querySelectorAll('.info-btn[data-help]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.getAttribute('data-help');
+            window.openHelp(target);
+        });
+    });
+
+    // 5. Subjects Add Input Button
+    const addSubjectInputBtn = document.getElementById('add-subject-input-btn');
+    if (addSubjectInputBtn) {
+        addSubjectInputBtn.addEventListener('click', addSubjectInput);
+    }
+
+    // 6. Timetable Day Buttons
+    document.querySelectorAll('.day-btn[data-day]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const day = btn.getAttribute('data-day');
+            switchDay(day);
+        });
+    });
+
+    // 7. Timetable Add Period Button
+    const addPeriodBtn = document.getElementById('add-period-btn');
+    if (addPeriodBtn) {
+        addPeriodBtn.addEventListener('click', addPeriod);
+    }
+
+    // 8. Attendance Bulk Buttons
+    const bulkPresentBtn = document.getElementById('bulk-present-btn');
+    if (bulkPresentBtn) bulkPresentBtn.addEventListener('click', () => markWholeDay('present'));
+
+    const bulkAbsentBtn = document.getElementById('bulk-absent-btn');
+    if (bulkAbsentBtn) bulkAbsentBtn.addEventListener('click', () => markWholeDay('absent'));
+
+    const bulkHolidayBtn = document.getElementById('bulk-holiday-btn');
+    if (bulkHolidayBtn) bulkHolidayBtn.addEventListener('click', () => markWholeDay('holiday'));
+
+    const bulkClearBtn = document.getElementById('bulk-clear-btn');
+    if (bulkClearBtn) bulkClearBtn.addEventListener('click', () => markWholeDay('clear'));
+
+    const addExtraClassBtn = document.getElementById('add-extra-class-btn');
+    if (addExtraClassBtn) addExtraClassBtn.addEventListener('click', openExtraClassModal);
+
+    const toggleMarkerBtn = document.getElementById('toggleMarkerBtn');
+    if (toggleMarkerBtn) toggleMarkerBtn.addEventListener('click', toggleStartMarker);
+
+    // 9. Profile Settings & Actions
+    const copyUserIdContainer = document.getElementById('copy-user-id-container');
+    if (copyUserIdContainer) {
+        copyUserIdContainer.addEventListener('click', copyUserId);
+    }
+
+    const openChangeEmailBtn = document.getElementById('open-change-email-btn');
+    if (openChangeEmailBtn) {
+        openChangeEmailBtn.addEventListener('click', openChangeEmailModal);
+    }
+
+    const openChangePasswordBtn = document.getElementById('open-change-password-btn');
+    if (openChangePasswordBtn) {
+        openChangePasswordBtn.addEventListener('click', openChangePasswordModal);
+    }
+
+    const saveProfileBtn = document.getElementById('save-profile-btn');
+    if (saveProfileBtn) {
+        saveProfileBtn.addEventListener('click', saveProfile);
+    }
+
+    // 10. Modal Buttons
+    const cancelChangeEmailBtn = document.getElementById('cancel-change-email-btn');
+    if (cancelChangeEmailBtn) cancelChangeEmailBtn.addEventListener('click', closeChangeEmailModal);
+
+    const confirmChangeEmailBtn = document.getElementById('confirm-change-email-btn');
+    if (confirmChangeEmailBtn) {
+        confirmChangeEmailBtn.addEventListener('click', function() {
+            confirmChangeEmail(confirmChangeEmailBtn);
+        });
+    }
+
+    const cancelChangePasswordBtn = document.getElementById('cancel-change-password-btn');
+    if (cancelChangePasswordBtn) cancelChangePasswordBtn.addEventListener('click', closeChangePasswordModal);
+
+    const btnRequestOtp = document.getElementById('btn-request-otp');
+    if (btnRequestOtp) {
+        btnRequestOtp.addEventListener('click', function() {
+            requestPasswordOTP(btnRequestOtp);
+        });
+    }
+
+    const newPasswordToggle = document.getElementById('new-password-toggle');
+    if (newPasswordToggle) {
+        newPasswordToggle.addEventListener('click', () => {
+            if (typeof window.togglePasswordVisibility === 'function') {
+                window.togglePasswordVisibility('new-password-input', newPasswordToggle);
+            }
+        });
+    }
+
+    const cancelChangePasswordStep2Btn = document.getElementById('cancel-change-password-step2-btn');
+    if (cancelChangePasswordStep2Btn) cancelChangePasswordStep2Btn.addEventListener('click', closeChangePasswordModal);
+
+    const btnConfirmPassword = document.getElementById('btn-confirm-password');
+    if (btnConfirmPassword) {
+        btnConfirmPassword.addEventListener('click', function() {
+            confirmChangePassword(btnConfirmPassword);
+        });
+    }
+
+    const cancelExtraClassBtn = document.getElementById('cancel-extra-class-btn');
+    if (cancelExtraClassBtn) cancelExtraClassBtn.addEventListener('click', closeExtraClassModal);
+
+    const confirmExtraClassBtn = document.getElementById('confirm-extra-class-btn');
+    if (confirmExtraClassBtn) confirmExtraClassBtn.addEventListener('click', saveExtraClass);
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     initTheme();
+    bindDashboardEvents();
     
     // Mobile Header Scroll Logic
     let lastScrollTop = 0;
@@ -153,7 +303,7 @@ async function loadDashboardData(userId, showLoading = false) {
     if (showLoading && output2) output2.innerHTML = "Loading attendance...";
 
     try {
-        const data = await fetchDashboardData(userId);
+        const data = await fetchDashboardData();
         
         // If we are currently syncing local changes, don't overwrite the cache or UI
         if (isSyncing()) {
@@ -193,6 +343,7 @@ function renderDashboardUI(data, skipSections = []) {
     // Always update the main dashboard view
     displaySubjects(data.subjects);
     displayOverall(data.overall);
+    checkAndDisplayPendingWarning();
     
     // Only update edit forms if not explicitly skipped (to avoid focus loss)
     if (!skipSections.includes('subjects')) {
@@ -264,3 +415,115 @@ function displayOverall(overall) {
     `;
     output2.innerHTML += overallDiv;
 }
+
+// Sidebar toggle & helper handlers (migrated from inline HTML script)
+document.addEventListener("DOMContentLoaded", () => {
+    const sidebar = document.getElementById('sidebar');
+    const openBtn = document.getElementById('openSidebarBtn');
+    const closeBtn = document.getElementById('closeSidebarBtn');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+        if (sidebar && overlay) {
+            sidebar.classList.add('open');
+            overlay.classList.add('active');
+        }
+    }
+
+    function closeSidebar() {
+        if (sidebar && overlay) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        }
+    }
+
+    if (openBtn) openBtn.addEventListener('click', openSidebar);
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+    
+    window.closeSidebar = closeSidebar;
+    window.openSidebar = openSidebar;
+});
+
+function togglePasswordVisibility(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input) {
+        if (input.type === "password") {
+            input.type = "text";
+            icon.textContent = "🙈";
+        } else {
+            input.type = "password";
+            icon.textContent = "👁️";
+        }
+    }
+}
+window.togglePasswordVisibility = togglePasswordVisibility;
+
+function checkAndDisplayPendingWarning() {
+    const output2 = document.getElementById("output2");
+    if (!output2) return;
+    
+    // Remove any existing banner first
+    const existing = document.querySelector('.pending-warning-banner');
+    if (existing) existing.remove();
+    
+    if (typeof window.getOldestPendingDate !== 'function') return;
+    
+    const pendingInfo = window.getOldestPendingDate();
+    if (!pendingInfo) return;
+
+    // Create the banner container
+    const banner = document.createElement('div');
+    banner.className = 'pending-warning-banner';
+    banner.style.cssText = `
+        background: rgba(245, 158, 11, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-left: 5px solid #f59e0b;
+        border-radius: 8px;
+        padding: 14px 18px;
+        margin-bottom: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    `;
+
+    const dayName = pendingInfo.date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+
+    banner.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px; text-align: left;">
+            <span style="font-size: 1.6rem; line-height: 1;">⚠️</span>
+            <div>
+                <strong style="color: #d97706; font-size: 1.05rem; display: block; margin-bottom: 3px;">Pending Attendance Logs</strong>
+                <span style="font-size: 0.9rem; color: var(--text-secondary);">You have unlogged attendance for <strong>${dayName}</strong>.</span>
+            </div>
+        </div>
+        <button id="resolve-pending-btn" class="bulk-btn btn-present-mini" style="background: #f59e0b; color: white; border: none; width: auto; padding: 8px 16px; margin: 0; font-size: 0.85rem; font-weight: 600; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">⚠️ Log Now</button>
+    `;
+
+    // Insert banner at the very top of output2
+    output2.insertBefore(banner, output2.firstChild);
+
+    // Bind event listener
+    const resolveBtn = banner.querySelector('#resolve-pending-btn');
+    if (resolveBtn) {
+        resolveBtn.addEventListener('click', async () => {
+            if (window.customConfirm) {
+                const proceed = await window.customConfirm(
+                    `Would you like to directly open ${dayName} to fill in your pending attendance logs?`,
+                    "Pending Attendance Logs",
+                    "⚠️"
+                );
+                if (proceed && typeof window.openPendingDate === 'function') {
+                    window.openPendingDate(pendingInfo.dateStr);
+                }
+            } else if (confirm(`Open ${dayName} to log pending attendance?`)) {
+                if (typeof window.openPendingDate === 'function') {
+                    window.openPendingDate(pendingInfo.dateStr);
+                }
+            }
+        });
+    }
+}
+window.checkAndDisplayPendingWarning = checkAndDisplayPendingWarning;

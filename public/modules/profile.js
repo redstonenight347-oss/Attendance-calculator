@@ -40,7 +40,7 @@ export async function saveProfile() {
     saveBtn.textContent = "Saving...";
 
     try {
-        await updateProfileApi(userId, { name: newName });
+        await updateProfileApi({ name: newName });
         window.cachedProfileName = newName;
         showToast("Profile updated!");
     } catch (err) {
@@ -120,7 +120,7 @@ export async function confirmChangeEmail(btn) {
     }
 
     try {
-        await updateProfileApi(userId, { email: newEmail });
+        await updateProfileApi({ email: newEmail });
         showToast("Email updated successfully!");
         
         // Update local cache and display
@@ -188,7 +188,7 @@ export async function requestPasswordOTP(btn) {
     }
     
     try {
-        await requestPasswordOTPApi(userId);
+        await requestPasswordOTPApi();
         document.getElementById('password-step-1').style.display = 'none';
         document.getElementById('password-step-2').style.display = 'block';
         document.getElementById('password-otp-input').focus();
@@ -222,7 +222,7 @@ export async function confirmChangePassword(btn) {
     }
     
     try {
-        await changePasswordWithOTPApi(userId, otp, newPassword);
+        await changePasswordWithOTPApi(otp, newPassword);
         showToast("Password changed successfully!");
         closeChangePasswordModal();
     } catch (err) {

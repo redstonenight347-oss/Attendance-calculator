@@ -1,5 +1,7 @@
-import { db } from "./db.js";
-import { users, subjects, timetable, attendanceLogs } from "./schema.js";
+import { db } from "../db.js";
+import { users, subjects, timetable, attendanceLogs } from "../schema.js";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 // config
 const USER_NAME = "test User4";
@@ -32,17 +34,29 @@ function addDays(date, days) {
 
 // main seed
 async function seed() {
-  console.log("Seeding...");
+  console.log("Starting DB seeding...");
 
+  // Clean up any existing seed user to make the seed script fully idempotent
+  console.log("Cleaning up existing seed user data...");
+  await db.delete(users).where(eq(users.email, USER_EMAIL));
+
+  // Securely hash the password before seeding
+  console.log("Hashing password...");
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(USER_PASSWORD, salt);
+
+  // 1. insert user
+  console.log("Inserting user...");
   const [insertedUser] = await db.insert(users).values({
     name: USER_NAME,
     email: USER_EMAIL,
-    password: USER_PASSWORD,
+    password: hashedPassword,
   }).returning();
 
   const currentUserId = insertedUser.id;
 
   // 2. insert subjects
+  console.log("Inserting subjects...");
   const insertedSubjects = await db
     .insert(subjects)
     .values(
@@ -56,6 +70,7 @@ async function seed() {
   console.log("Subjects inserted");
 
   // 3. create timetable
+  console.log("Creating timetable data...");
   const timetableData = [];
 
   for (const day of DAYS) {
@@ -77,6 +92,7 @@ async function seed() {
   console.log("Timetable created");
 
   // 4. generate attendance logs
+  console.log("Generating attendance logs...");
   const logs = [];
 
   let startDate = new Date("2026-01-01");
@@ -106,6 +122,7 @@ async function seed() {
   console.log(`Generated ${logs.length} logs`);
 
   // 5. bulk insert (chunked to avoid memory issues)
+  console.log("Bulk inserting attendance logs into DB...");
   const CHUNK_SIZE = 500;
 
   for (let i = 0; i < logs.length; i += CHUNK_SIZE) {
@@ -119,10 +136,10 @@ async function seed() {
 
 seed()
   .then(() => {
-    console.log("Seeding complete");
+    console.log("Seeding complete successfully!");
     process.exit(0);
   })
   .catch((err) => {
-    console.error(err);
+    console.error("Critical seeding error:", err);
     process.exit(1);
   });

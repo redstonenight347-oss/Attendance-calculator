@@ -76,6 +76,11 @@ export const attendanceLogs = pgTable("attendance_logs",
     timetableIdx: index("idx_attendance_timetable").on(table.timetableId),
     subjectIdx: index("idx_attendance_subject").on(table.subjectId),
     statusIdx: index("idx_attendance_status").on(table.status),
+    uniqueTimetableAttendance: uniqueIndex("unique_timetable_attendance").on(
+      table.userId,
+      table.timetableId,
+      table.date
+    ),
   })
 );
 

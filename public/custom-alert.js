@@ -52,7 +52,7 @@
         });
     };
 
-    window.customConfirm = function(message, title = 'Confirm Action', icon = '⚠️') {
+    window.customConfirm = function(message, title = 'Confirm Action', icon = '⚠️', cancelLabel = 'Cancel', proceedLabel = 'Proceed') {
         return new Promise((resolve) => {
             const backdrop = document.getElementById('custom-modal-backdrop');
             const titleEl = document.getElementById('custom-modal-title');
@@ -64,9 +64,12 @@
             messageEl.textContent = message;
             iconEl.textContent = icon;
             
+            const isDanger = title.toLowerCase().includes('delete') || title.toLowerCase().includes('clear');
+            const btnClass = isDanger ? 'modal-btn-danger' : 'modal-btn-primary';
+            
             buttonsContainer.innerHTML = `
-                <button class="modal-btn modal-btn-secondary">Cancel</button>
-                <button class="modal-btn modal-btn-danger">Proceed</button>
+                <button class="modal-btn modal-btn-secondary">${cancelLabel}</button>
+                <button class="modal-btn ${btnClass}">${proceedLabel}</button>
             `;
             
             const [cancelBtn, proceedBtn] = buttonsContainer.querySelectorAll('button');
