@@ -3,6 +3,11 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { logger } from './utils/logger.js';
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config({quiet: true});
 
@@ -44,6 +49,10 @@ app.use(express.json({
   limit: '100kb'
 }));
 app.use(express.static("public"));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../public/index.html"));
+});
 
 // Health check endpoint
 app.get("/health", (req, res) => {
