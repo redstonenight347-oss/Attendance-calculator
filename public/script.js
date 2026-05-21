@@ -422,7 +422,7 @@ async function resetPasswordWithOTP() {
         if (!res.ok) {
             output.innerHTML = `<p class="error-text">${data.message || 'Failed to reset password'}</p>`;
         } else {
-            output.innerHTML = `<p style="color: #4ade80;">Password reset successfully! Redirecting to Sign In...</p>`;
+            output.innerHTML = `<p style="color: #4ade80;">Password reset successfully! Redirecting to Log In...</p>`;
             setTimeout(() => {
                 hideForgotPassword();
             }, 2000);
