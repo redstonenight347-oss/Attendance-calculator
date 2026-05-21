@@ -89,11 +89,41 @@ export function initCalendar() {
     renderDayAttendance();
     updateMarkerButton();
 
+    checkAndPromptStartMarker();
+}
+
+function hasSetupSubjectsAndTimetable() {
+    const userId = getUserId();
+    const subjects = Storage.get(userId, 'subjects_last_saved') || [];
+    const timetable = Storage.get(userId, 'timetable_last_saved') || {};
+
+    const hasSubjects = Array.isArray(subjects) && subjects.length > 0;
+    if (!hasSubjects) return false;
+
+    let hasTimetable = false;
+    if (timetable && typeof timetable === 'object') {
+        const days = Object.keys(timetable);
+        for (const day of days) {
+            const periods = timetable[day] || [];
+            if (Array.isArray(periods)) {
+                const filled = periods.some(p => p && p.name && p.name.trim() !== '');
+                if (filled) {
+                    hasTimetable = true;
+                    break;
+                }
+            }
+        }
+    }
+    return hasTimetable;
+}
+
+export function checkAndPromptStartMarker() {
+    const userId = getUserId();
     const startMarkerStr = Storage.get(userId, 'start_marker');
-    if (!startMarkerStr && !window.hasAlertedStartMarker) {
+    if (!startMarkerStr && !window.hasAlertedStartMarker && hasSetupSubjectsAndTimetable()) {
         setTimeout(() => {
             const freshMarker = Storage.get(getUserId(), 'start_marker');
-            if (!freshMarker && !window.hasAlertedStartMarker) {
+            if (!freshMarker && !window.hasAlertedStartMarker && hasSetupSubjectsAndTimetable()) {
                 promptForStartMarker("Welcome! You haven't set a Start Marker yet. Choose an option below to get started:");
                 window.hasAlertedStartMarker = true;
             }
@@ -105,6 +135,7 @@ export function refreshCalendarUI() {
     renderCalendar();
     renderDayAttendance();
     updateMarkerButton();
+    checkAndPromptStartMarker();
 }
 window.refreshCalendarUI = refreshCalendarUI;
 
