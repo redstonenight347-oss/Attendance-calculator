@@ -12,18 +12,12 @@ const __dirname = path.dirname(__filename);
 dotenv.config({quiet: true});
 
 // Environment Startup Validation
-const REQUIRED_ENV = ["DATABASE_URL", "JWT_SECRET"];
+const REQUIRED_ENV = ["DATABASE_URL", "JWT_SECRET", "EMAIL_USER", "EMAIL_PASS"];
 for (const envVar of REQUIRED_ENV) {
   if (!process.env[envVar]) {
     logger.error(`CRITICAL STARTUP ERROR: Environment variable "${envVar}" is missing!`);
     process.exit(1);
   }
-}
-
-// Check email configuration (either Resend API Key or Gmail SMTP credentials)
-if (!process.env.RESEND_API_KEY && (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)) {
-  logger.error(`CRITICAL STARTUP ERROR: Email configuration is missing. Provide RESEND_API_KEY for Resend, or EMAIL_USER and EMAIL_PASS for Gmail SMTP.`);
-  process.exit(1);
 }
 
 import userRoutes from "./routes/users.router.js";

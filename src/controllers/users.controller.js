@@ -1,6 +1,6 @@
 import { getUserByName, createUserService, getUserByEmail, saveSubjectsService, getUserById, updateUser, updateUserPasswordService } from "../services/users.services.js";
 import { clearUserCache } from "../services/attendance.services.js";
-import { sendEmailChangeNotification, sendPasswordChangeEmail, sendPasswordOTPEmail, sendSignupOTPEmail } from "../services/email.services.js";
+import { sendEmailChangeNotification, sendPasswordChangeEmail, sendPasswordOTPEmail, sendSignupOTPEmail, sendWelcomeEmail } from "../services/email.services.js";
 import { logger } from "../utils/logger.js";
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -143,6 +143,11 @@ export async function signup(req, res, next) {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const newUser = await createUserService(name, email, hashedPassword);
+
+    // Send welcome email asynchronously to avoid blocking the response
+    sendWelcomeEmail(email, name).catch(err => {
+      logger.error("Failed to send welcome email after signup", err, { email });
+    });
 
     const token = jwt.sign(
       { id: newUser.id, name: newUser.name },
