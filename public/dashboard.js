@@ -1,17 +1,19 @@
 import { fetchDashboardData } from './modules/api.js';
 import { getUserId } from './modules/utils.js';
 import { Storage } from './modules/storage.js';
-import { isSyncing } from './modules/sync.js';
+import { isDirty, getDirtyKeys, clearAllDirty, setSyncStatus, SyncStatus } from './modules/sync.js';
 import { 
     populateEditSubjects, 
     addSubjectInput, 
-    deleteAllSubjects 
+    deleteAllSubjects,
+    getSubjectsToSave
 } from './modules/subjects.js';
 import { 
     initTimetable, 
     setAvailableSubjects, 
     switchDay, 
-    addPeriod
+    addPeriod,
+    getPeriodsData
 } from './modules/timetable.js';
 import { 
     initCalendar, 
@@ -22,7 +24,9 @@ import {
     saveExtraClass,
     renderDayAttendance,
     updateAttendanceCacheNames,
-    toggleStartMarker
+    toggleStartMarker,
+    getPendingLogsToSave,
+    refreshLogsAfterSave
 } from './modules/calendar.js';
 import { 
     saveProfile, 
@@ -35,12 +39,27 @@ import {
     requestPasswordOTP, 
     confirmChangePassword 
 } from './modules/profile.js';
-import { verifyTokenApi } from './modules/api.js';
+import { verifyTokenApi, saveSubjectsApi, saveTimetableApi, saveAttendanceLogApi } from './modules/api.js';
 import { initTheme } from './modules/theme.js';
 
 
 // Expose functions to global scope immediately for HTML onclicks
-window.showSection = (sectionId, navLink) => {
+window.showSection = async (sectionId, navLink) => {
+    if (isDirty()) {
+        const proceed = window.customConfirm ? 
+            await window.customConfirm("You have unsaved changes. Navigating away will discard them.", "Unsaved Changes", "⚠️", "Edit", "Discard") :
+            confirm("You have unsaved changes. Click OK to discard, or Cancel to edit.");
+            
+        if (!proceed) {
+            // User chose Edit (Cancel)
+            return;
+        }
+        
+        // User chose Discard
+        clearAllDirty();
+        window.refreshDashboard(); // Re-render DOM from server data
+    }
+
     document.querySelectorAll('.content-section').forEach(sec => sec.style.display = 'none');
     document.getElementById(sectionId).style.display = 'block';
     
@@ -98,24 +117,21 @@ async function initialize(userId) {
     // Initialize global refresh function
     window.refreshDashboard = (data = null, skipSections = []) => {
         if (data) {
-            renderDashboardUI(data, skipSections);
+            // Merge with existing data to prevent wiping other sections when only partial data is provided (optimistic UI)
+            const mergedData = { ...window.latestDashboardData };
+            if (data.subjects !== null && data.subjects !== undefined) mergedData.subjects = data.subjects;
+            if (data.overall !== null && data.overall !== undefined) mergedData.overall = data.overall;
+            if (data.timetable !== null && data.timetable !== undefined) mergedData.timetable = data.timetable;
+            if (data.user !== null && data.user !== undefined) mergedData.user = data.user;
+            
+            renderDashboardUI(mergedData, skipSections);
             return;
         }
         loadDashboardData(userId, false);
     };
-    
-    // Initial load: Try cache first for instant UI
-    const cachedData = Storage.get(userId, 'dashboard');
-    if (cachedData) {
-        if (cachedData.user && cachedData.user.startMarker !== undefined) {
-            Storage.save(userId, 'start_marker', cachedData.user.startMarker);
-        }
-        renderDashboardUI(cachedData);
-        initCalendar(); 
-    }
 
-    // Always fetch fresh data in background
-    loadDashboardData(userId, !cachedData);
+    // Always load fresh data from the server; no local cache for dashboard data
+    loadDashboardData(userId, true);
 }
 
 function bindDashboardEvents() {
@@ -255,6 +271,12 @@ function bindDashboardEvents() {
 
     const confirmExtraClassBtn = document.getElementById('confirm-extra-class-btn');
     if (confirmExtraClassBtn) confirmExtraClassBtn.addEventListener('click', saveExtraClass);
+
+    // 11. Global Save Button
+    const globalSaveBtn = document.getElementById('global-save-btn');
+    if (globalSaveBtn) {
+        globalSaveBtn.addEventListener('click', saveAllChanges);
+    }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -304,27 +326,18 @@ async function loadDashboardData(userId, showLoading = false) {
 
     try {
         const data = await fetchDashboardData();
-        
-        // If we are currently syncing local changes, don't overwrite the cache or UI
-        if (isSyncing()) {
-            console.log("Sync in progress, skipping background data update.");
-            return;
-        }
 
-        Storage.save(userId, 'dashboard', data);
-        
-        // Keep start marker in sync from DB
-        if (data.user && data.user.startMarker !== undefined) {
-            Storage.save(userId, 'start_marker', data.user.startMarker);
-        }
-        
-        // Initialize Delta-Check markers
-        const subjectsForStorage = data.subjects.map(s => ({ id: s.subject_id, name: s.subject_name }));
-        Storage.save(userId, 'subjects_last_saved', subjectsForStorage);
-        Storage.save(userId, 'timetable_last_saved', data.timetable);
+        // We don't skip background data update anymore since saves are manual.
+        // The optimistic UI logic already skips rendering sections currently being edited.
 
-        if (output2 && showLoading) output2.innerHTML = ""; 
-        renderDashboardUI(data);
+        // Start marker is kept in sync via updateStartMarkerFromUser below
+
+        if (output2 && showLoading) output2.innerHTML = "";
+
+        const skipSections = [];
+        if (isEditingSubjects()) skipSections.push('subjects');
+        if (isEditingTimetable()) skipSections.push('timetable');
+        renderDashboardUI(data, skipSections);
 
         if (showLoading) {
             initCalendar();
@@ -339,7 +352,20 @@ async function loadDashboardData(userId, showLoading = false) {
     }
 }
 
+function isEditingSubjects() {
+    const list = document.getElementById('subjects-list');
+    if (!list) return false;
+    return list.contains(document.activeElement);
+}
+
+function isEditingTimetable() {
+    return document.body.classList.contains('timetable-editing');
+}
+
 function renderDashboardUI(data, skipSections = []) {
+    // Keep latest dashboard data in memory for calendar/profile optimistic updates
+    window.latestDashboardData = data;
+
     // Always update the main dashboard view
     displaySubjects(data.subjects);
     displayOverall(data.overall);
@@ -356,6 +382,11 @@ function renderDashboardUI(data, skipSections = []) {
         if (typeof window.renderDayAttendance === 'function') {
             window.renderDayAttendance();
         }
+    }
+
+    // Sync start marker from DB user profile to calendar module
+    if (data.user && typeof window.updateStartMarkerFromUser === 'function') {
+        window.updateStartMarkerFromUser(data.user);
     }
 
     // Update User Info
@@ -527,3 +558,71 @@ function checkAndDisplayPendingWarning() {
     }
 }
 window.checkAndDisplayPendingWarning = checkAndDisplayPendingWarning;
+
+async function saveAllChanges() {
+    if (!isDirty()) return;
+
+    if (window.customConfirm) {
+        const proceed = await window.customConfirm("Are you sure you want to save all changes?", "Save Changes", "💾");
+        if (!proceed) return;
+    } else {
+        if (!confirm("Are you sure you want to save all changes?")) return;
+    }
+
+    const dirtyKeys = getDirtyKeys();
+    setSyncStatus(SyncStatus.SAVING);
+    
+    const saveBtn = document.getElementById('global-save-btn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+
+    try {
+        if (dirtyKeys.includes('subjects')) {
+            const subjectsToSave = getSubjectsToSave();
+            await saveSubjectsApi(subjectsToSave);
+        }
+
+        if (dirtyKeys.includes('timetable')) {
+            const timetableData = getPeriodsData();
+            await saveTimetableApi(timetableData);
+        }
+
+        if (dirtyKeys.includes('attendance')) {
+            const pendingLogs = getPendingLogsToSave();
+            await saveAttendanceLogApi(pendingLogs);
+            await refreshLogsAfterSave();
+        }
+
+        clearAllDirty();
+        
+        if (window.customAlert) {
+            await window.customAlert("All changes saved successfully!", "Success", "✅");
+        } else {
+            alert("All changes saved successfully!");
+        }
+        
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+        }
+        
+        // Fetch the new fresh data from the DB to ensure UI is completely up to date
+        window.refreshDashboard();
+
+    } catch (err) {
+        console.error("Failed to save changes:", err);
+        setSyncStatus(SyncStatus.ERROR, true);
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+        }
+        if (window.customAlert) {
+            window.customAlert("Failed to save changes. Please try again.", "Save Failed", "❌");
+        } else {
+            alert("Failed to save changes. Please try again.");
+        }
+    }
+}
+window.saveAllChanges = saveAllChanges;

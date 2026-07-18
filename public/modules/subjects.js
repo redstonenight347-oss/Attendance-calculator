@@ -1,7 +1,6 @@
 import { saveSubjectsApi } from './api.js';
 import { getUserId } from './utils.js';
-import { Storage } from './storage.js';
-import { debounceSync } from './sync.js';
+import { markDirty } from './sync.js';
 
 export function populateEditSubjects(subjects) {
     const list = document.getElementById('subjects-list');
@@ -20,7 +19,7 @@ export function populateEditSubjects(subjects) {
                 }
             }
         });
-        
+
         window.cachedSubjects = subjects.map(s => ({
             id: s.subject_id,
             name: s.subject_name
@@ -31,7 +30,7 @@ export function populateEditSubjects(subjects) {
     list.innerHTML = '';
     window.cachedSubjects = [];
     if (!subjects || subjects.length === 0) return;
-    
+
     subjects.forEach(s => {
         const name = s.subject_name || '';
         addSubjectInput(name, s.subject_id);
@@ -74,11 +73,11 @@ export function addSubjectInput(value = '', id = '') {
         
         div.remove();
         updateSubjectLabels();
-        triggerAutoSave();
+        onSubjectChange();
     });
 
     div.querySelector('.subject-name-input').addEventListener('input', () => {
-        triggerAutoSave();
+        onSubjectChange();
     });
     
     list.appendChild(div);
@@ -100,12 +99,12 @@ export async function deleteAllSubjects() {
         const list = document.getElementById('subjects-list');
         if (list) {
             list.innerHTML = '';
-            triggerAutoSave();
+            onSubjectChange();
         }
     }
 }
 
-function triggerAutoSave() {
+function onSubjectChange() {
     const inputs = document.querySelectorAll('.subject-name-input');
     const subjects = [];
     inputs.forEach(input => {
@@ -123,52 +122,37 @@ function triggerAutoSave() {
         }
     });
 
-    const userId = getUserId();
-    
-    // DELTA CHECK: Only proceed if data has actually changed from what's in cache/memory
-    const lastSaved = Storage.get(userId, 'subjects_last_saved');
-    if (JSON.stringify(subjects) === JSON.stringify(lastSaved)) {
-        return; 
-    }
-
-    // OPTIMISTIC UPDATE
-    const dashboardCache = Storage.get(userId, 'dashboard');
-    if (dashboardCache) {
-        dashboardCache.subjects = subjects.map(s => {
-            const existing = dashboardCache.subjects.find(ex => ex.subject_id == s.id || (ex.subject_name === s.name && String(ex.subject_id).startsWith('temp_')));
-            if (existing) {
-                return { ...existing, subject_name: s.name, subject_id: s.id || existing.subject_id };
-            }
-            return {
+    // Optimistic UI update for dashboard stats (subjects list only, no cache persistence)
+    if (window.refreshDashboard) {
+        window.refreshDashboard({
+            subjects: subjects.map(s => ({
                 subject_id: s.id,
                 subject_name: s.name,
                 total_classes: 0,
                 attended_classes: 0,
                 attendance_percentage: 0
-            };
-        });
-        Storage.save(userId, 'dashboard', dashboardCache);
-        if (window.refreshDashboard) window.refreshDashboard(dashboardCache, ['subjects', 'timetable']);
+            })),
+            overall: null,
+            timetable: null,
+            user: null
+        }, ['subjects', 'timetable']);
     }
 
-    // Debounced background sync
-    debounceSync('subjects', async () => {
-        const latestInputs = document.querySelectorAll('.subject-name-input');
-        const currentSubjectsToSave = [];
-        latestInputs.forEach(input => {
-            let val = input.value.trim();
-            const id = input.getAttribute('data-id');
-            if (val) {
-                currentSubjectsToSave.push({
-                    id: (id && !id.startsWith('temp_')) ? parseInt(id) : null,
-                    name: val
-                });
-            }
-        });
+    markDirty('subjects');
+}
 
-        await saveSubjectsApi(currentSubjectsToSave);
-        Storage.save(userId, 'subjects_last_saved', currentSubjectsToSave);
-        // Refresh dashboard once to get real IDs from server if needed
-        if (window.refreshDashboard) window.refreshDashboard(null, []);
-    }, 4000); // 4 second idle time
+export function getSubjectsToSave() {
+    const latestInputs = document.querySelectorAll('.subject-name-input');
+    const currentSubjectsToSave = [];
+    latestInputs.forEach(input => {
+        let val = input.value.trim();
+        const id = input.getAttribute('data-id');
+        if (val) {
+            currentSubjectsToSave.push({
+                id: (id && !id.startsWith('temp_')) ? parseInt(id) : null,
+                name: val
+            });
+        }
+    });
+    return currentSubjectsToSave;
 }

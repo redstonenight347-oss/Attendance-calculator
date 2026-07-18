@@ -2,8 +2,18 @@ import { fetchMonthlyLogsApi, saveAttendanceLogApi, updateProfileApi } from './a
 import { getUserId, formatDate } from './utils.js';
 import { getPeriodsData } from './timetable.js';
 import { Storage } from './storage.js';
-import { debounceSync } from './sync.js';
+import { markDirty } from './sync.js';
 import { calculateNewStats } from './calculator.js';
+
+let currentUserStartMarker = null;
+
+function getStartMarker() {
+    return currentUserStartMarker;
+}
+
+function setStartMarker(value) {
+    currentUserStartMarker = value || null;
+}
 
 let currentViewDate = new Date();
 let selectedDate = new Date();
@@ -11,7 +21,6 @@ let attendanceLogsCache = [];
 let fetchLogsTimeout = null;
 let isFetchingLogs = false;
 let pendingLogsQueue = []; // Queue for bulk sync
-let isSyncingAttendance = false; // True while save+fetch cycle is in progress
 
 // Global click listener to close attendance slot action overlays when clicking outside
 document.addEventListener('click', (e) => {
@@ -29,12 +38,7 @@ export function initCalendar() {
     if (prevBtn && !prevBtn.dataset.listener) {
         prevBtn.addEventListener('click', () => {
             currentViewDate.setMonth(currentViewDate.getMonth() - 1);
-            const userId = getUserId();
-            const year = currentViewDate.getFullYear();
-            const month = currentViewDate.getMonth() + 1;
-            const cachedLogs = Storage.get(userId, `logs_${year}_${month}`);
-            if (cachedLogs) attendanceLogsCache = cachedLogs;
-            else attendanceLogsCache = [];
+            attendanceLogsCache = [];
             renderCalendar();
             debouncedFetchLogs();
         });
@@ -44,12 +48,7 @@ export function initCalendar() {
     if (nextBtn && !nextBtn.dataset.listener) {
         nextBtn.addEventListener('click', () => {
             currentViewDate.setMonth(currentViewDate.getMonth() + 1);
-            const userId = getUserId();
-            const year = currentViewDate.getFullYear();
-            const month = currentViewDate.getMonth() + 1;
-            const cachedLogs = Storage.get(userId, `logs_${year}_${month}`);
-            if (cachedLogs) attendanceLogsCache = cachedLogs;
-            else attendanceLogsCache = [];
+            attendanceLogsCache = [];
             renderCalendar();
             debouncedFetchLogs();
         });
@@ -76,13 +75,7 @@ export function initCalendar() {
         nextDayBtn.dataset.listener = 'true';
     }
 
-    const userId = getUserId();
-    const year = currentViewDate.getFullYear();
-    const month = currentViewDate.getMonth() + 1;
-    const cachedLogs = Storage.get(userId, `logs_${year}_${month}`);
-    if (cachedLogs) {
-        attendanceLogsCache = cachedLogs;
-    }
+    attendanceLogsCache = [];
 
     renderCalendar();
     debouncedFetchLogs();
@@ -93,9 +86,8 @@ export function initCalendar() {
 }
 
 function hasSetupSubjectsAndTimetable() {
-    const userId = getUserId();
-    const subjects = Storage.get(userId, 'subjects_last_saved') || [];
-    const timetable = Storage.get(userId, 'timetable_last_saved') || {};
+    const subjects = window.cachedSubjects || [];
+    const timetable = getPeriodsData();
 
     const hasSubjects = Array.isArray(subjects) && subjects.length > 0;
     if (!hasSubjects) return false;
@@ -118,11 +110,10 @@ function hasSetupSubjectsAndTimetable() {
 }
 
 export function checkAndPromptStartMarker() {
-    const userId = getUserId();
-    const startMarkerStr = Storage.get(userId, 'start_marker');
+    const startMarkerStr = getStartMarker();
     if (!startMarkerStr && !window.hasAlertedStartMarker && hasSetupSubjectsAndTimetable()) {
         setTimeout(() => {
-            const freshMarker = Storage.get(getUserId(), 'start_marker');
+            const freshMarker = getStartMarker();
             if (!freshMarker && !window.hasAlertedStartMarker && hasSetupSubjectsAndTimetable()) {
                 promptForStartMarker("Welcome! You haven't set a Start Marker yet. Choose an option below to get started:");
                 window.hasAlertedStartMarker = true;
@@ -144,9 +135,7 @@ function handleDateChange(oldMonth, oldYear) {
     const newYear = selectedDate.getFullYear();
     if (oldMonth !== newMonth || oldYear !== newYear) {
         currentViewDate = new Date(newYear, newMonth, 1);
-        const userId = getUserId();
-        const cachedLogs = Storage.get(userId, `logs_${newYear}_${newMonth + 1}`);
-        if (cachedLogs) attendanceLogsCache = cachedLogs;
+        attendanceLogsCache = [];
         renderCalendar();
         debouncedFetchLogs();
     } else {
@@ -165,13 +154,6 @@ async function fetchMonthlyLogs() {
     const userId = getUserId();
 
     if (!userId) return;
-    
-    // If a sync (save+fetch) is already in progress, skip this background fetch.
-    // The sync's own fetchMonthlyLogs call (via _fetchMonthlyLogsInternal) will handle it.
-    if (isSyncingAttendance) {
-        console.log('[Sync] Skipping background fetch — sync in progress');
-        return;
-    }
     
     await _fetchMonthlyLogsInternal(userId);
 }
@@ -220,7 +202,6 @@ async function _fetchMonthlyLogsInternal(userId) {
         }
         
         attendanceLogsCache = freshLogs;
-        Storage.save(userId, `logs_${year}_${month}`, freshLogs);
     } catch (err) {
         console.error("Error fetching logs:", err);
     } finally {
@@ -264,7 +245,7 @@ export function renderCalendar() {
         markersContainer.className = 'day-markers';
         
         // Pending check: if it's a previous day and has periods but NO logs for some periods
-        const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+        const startMarkerStr = getStartMarker();
         const startMarkerDate = startMarkerStr ? new Date(startMarkerStr) : null;
         if (startMarkerDate) startMarkerDate.setHours(0,0,0,0);
         const currentDateObj = new Date(date);
@@ -336,7 +317,7 @@ export function renderDayAttendance() {
     const selectedDateStr = formatDate(selectedDate);
     const claimedLogIds = new Set(); // Track logs matched to timetable periods
     
-    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    const startMarkerStr = getStartMarker();
     const startMarkerDate = startMarkerStr ? new Date(startMarkerStr) : null;
     if (startMarkerDate) startMarkerDate.setHours(0,0,0,0);
     const selectedDateObj = new Date(selectedDate);
@@ -409,7 +390,7 @@ export function renderDayAttendance() {
 }
 
 function renderExtraClasses(selectedDateStr, slotsWrapper, claimedLogIds = new Set()) {
-    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    const startMarkerStr = getStartMarker();
     const startMarkerDate = startMarkerStr ? new Date(startMarkerStr) : null;
     if (startMarkerDate) startMarkerDate.setHours(0,0,0,0);
     const selectedDateObj = new Date(selectedDateStr);
@@ -496,16 +477,13 @@ export async function markAttendance(subjectName, status, event, timetableId, su
     renderDayAttendance();
 
     // 3. Instant local update for dashboard stats
-    if (oldStatus !== status) {
-        const dashboardCache = Storage.get(userId, 'dashboard');
-        if (dashboardCache) {
-            const updatedDashboard = calculateNewStats(dashboardCache, subjectId, oldStatus, status);
-            Storage.save(userId, 'dashboard', updatedDashboard);
-            if (window.refreshDashboard) window.refreshDashboard(updatedDashboard, ['subjects', 'timetable']);
-        }
+    if (oldStatus !== status && window.latestDashboardData) {
+        const updatedDashboard = calculateNewStats(window.latestDashboardData, subjectId, oldStatus, status);
+        window.latestDashboardData = updatedDashboard;
+        if (window.refreshDashboard) window.refreshDashboard(updatedDashboard, ['subjects', 'timetable']);
     }
 
-    // 4. Queue for bulk sync
+    // 4. Queue for manual sync
     const logData = { id: logId, date: dateStr, subjectId, timetableId, status, subjectName };
     const queueIdx = pendingLogsQueue.findIndex(l => 
         (logId && l.id === logId) || (l.date === dateStr && (timetableId ? l.timetableId === timetableId : false))
@@ -513,24 +491,11 @@ export async function markAttendance(subjectName, status, event, timetableId, su
     if (queueIdx > -1) pendingLogsQueue[queueIdx] = logData;
     else pendingLogsQueue.push(logData);
 
-    debounceSync('attendance_queue', async () => {
-        const logsToSync = [...pendingLogsQueue];
-        pendingLogsQueue = [];
-        isSyncingAttendance = true;
-        try {
-            await saveAttendanceLogApi(logsToSync);
-            // Save succeeded — data is now in DB. Fetch will return it with real IDs.
-            // Only pendingLogsQueue (new edits made during save) needs merge protection.
-            await _fetchMonthlyLogsInternal(userId);
-            if (window.refreshDashboard) window.refreshDashboard();
-        } finally {
-            isSyncingAttendance = false;
-        }
-    }, 4000); 
+    markDirty('attendance');
 }
 
 export async function markWholeDay(status) {
-    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    const startMarkerStr = getStartMarker();
     if (!startMarkerStr) {
         promptForStartMarker();
         return;
@@ -553,7 +518,7 @@ export async function markWholeDay(status) {
     
     if (newLogs.length === 0) return;
 
-    let dashboardCache = Storage.get(userId, 'dashboard');
+    let dashboardCache = window.latestDashboardData || null;
 
     newLogs.forEach(newLog => {
         // Local calendar update
@@ -580,29 +545,31 @@ export async function markWholeDay(status) {
     });
 
     if (dashboardCache) {
-        Storage.save(userId, 'dashboard', dashboardCache);
+        window.latestDashboardData = dashboardCache;
         if (window.refreshDashboard) window.refreshDashboard(dashboardCache, ['subjects', 'timetable']);
     }
 
     renderCalendar();
     renderDayAttendance();
 
-    debounceSync('attendance_queue', async () => {
-        const logsToSync = [...pendingLogsQueue];
-        pendingLogsQueue = [];
-        isSyncingAttendance = true;
-        try {
-            await saveAttendanceLogApi(logsToSync);
-            await _fetchMonthlyLogsInternal(userId);
-            if (window.refreshDashboard) window.refreshDashboard();
-        } finally {
-            isSyncingAttendance = false;
-        }
-    }, 4000);
+    markDirty('attendance');
+}
+
+export function getPendingLogsToSave() {
+    const logsToSync = [...pendingLogsQueue];
+    pendingLogsQueue = [];
+    return logsToSync;
+}
+
+export async function refreshLogsAfterSave() {
+    const userId = getUserId();
+    if (userId) {
+        await _fetchMonthlyLogsInternal(userId);
+    }
 }
 
 export function openExtraClassModal() {
-    const startMarkerStr = Storage.get(getUserId(), 'start_marker');
+    const startMarkerStr = getStartMarker();
     if (!startMarkerStr) {
         promptForStartMarker();
         return;
@@ -667,24 +634,20 @@ export function updateAttendanceCacheNames(subjects) {
 }
 
 export function toggleStartMarker() {
-    const userId = getUserId();
-    const currentMarker = Storage.get(userId, 'start_marker');
+    const currentMarker = getStartMarker();
     const selectedDateStr = formatDate(selectedDate);
-    const dashboardCache = Storage.get(userId, 'dashboard');
 
     if (currentMarker) {
-        Storage.save(userId, 'start_marker', null);
-        if (dashboardCache && dashboardCache.user) {
-            dashboardCache.user.startMarker = null;
-            Storage.save(userId, 'dashboard', dashboardCache);
+        setStartMarker(null);
+        if (window.latestDashboardData && window.latestDashboardData.user) {
+            window.latestDashboardData.user.startMarker = null;
         }
         updateProfileApi({ startMarker: null }).catch(err => console.error("Failed to sync start marker:", err));
         console.log('Start marker removed');
     } else {
-        Storage.save(userId, 'start_marker', selectedDateStr);
-        if (dashboardCache && dashboardCache.user) {
-            dashboardCache.user.startMarker = selectedDateStr;
-            Storage.save(userId, 'dashboard', dashboardCache);
+        setStartMarker(selectedDateStr);
+        if (window.latestDashboardData && window.latestDashboardData.user) {
+            window.latestDashboardData.user.startMarker = selectedDateStr;
         }
         updateProfileApi({ startMarker: selectedDateStr }).catch(err => console.error("Failed to sync start marker:", err));
         console.log('Start marker set to ' + selectedDateStr);
@@ -697,7 +660,7 @@ export function toggleStartMarker() {
 export function updateMarkerButton() {
     const btn = document.getElementById('toggleMarkerBtn');
     if (!btn) return;
-    const currentMarker = Storage.get(getUserId(), 'start_marker');
+    const currentMarker = getStartMarker();
     
     if (currentMarker) {
         btn.textContent = `Remove Marker (${currentMarker})`;
@@ -785,7 +748,7 @@ export async function promptForStartMarker(customMessage = 'Please set a Start M
 
 export function getOldestPendingDate() {
     const userId = getUserId();
-    const startMarkerStr = Storage.get(userId, 'start_marker');
+    const startMarkerStr = getStartMarker();
     if (!startMarkerStr) return null;
     const startMarkerDate = new Date(startMarkerStr);
     startMarkerDate.setHours(0,0,0,0);
@@ -807,7 +770,10 @@ export function getOldestPendingDate() {
         const year = checkDate.getFullYear();
         const month = checkDate.getMonth() + 1;
         
-        const monthLogs = Storage.get(userId, `logs_${year}_${month}`) || [];
+        const monthLogs = attendanceLogsCache.filter(l => {
+            const logDate = new Date(l.date);
+            return logDate.getFullYear() === year && logDate.getMonth() + 1 === month;
+        });
         const dayLogs = monthLogs.filter(l => formatDate(l.date) === dateStr);
         
         const dayName = checkDate.toLocaleDateString('en-US', { weekday: 'long' });
@@ -831,13 +797,7 @@ export function openPendingDate(dateStr) {
     selectedDate = targetDate;
     currentViewDate = new Date(targetDate); // Set the calendar view to this month/year too!
 
-    // Fetch the cache or start fresh
-    const userId = getUserId();
-    const year = currentViewDate.getFullYear();
-    const month = currentViewDate.getMonth() + 1;
-    const cachedLogs = Storage.get(userId, `logs_${year}_${month}`);
-    if (cachedLogs) attendanceLogsCache = cachedLogs;
-    else attendanceLogsCache = [];
+    attendanceLogsCache = [];
 
     // Switch view section to Attendance
     const attLink = document.querySelector('a[data-section="attendance-section"]');
@@ -853,6 +813,13 @@ export function openPendingDate(dateStr) {
     debouncedFetchLogs();
 }
 
+export function updateStartMarkerFromUser(user) {
+    if (user && user.startMarker !== undefined) {
+        setStartMarker(user.startMarker);
+    }
+}
+
+window.updateStartMarkerFromUser = updateStartMarkerFromUser;
 window.getOldestPendingDate = getOldestPendingDate;
 window.openPendingDate = openPendingDate;
 
