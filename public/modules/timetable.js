@@ -1,7 +1,6 @@
 import { saveTimetableApi } from './api.js';
 import { getUserId } from './utils.js';
-import { Storage } from './storage.js';
-import { debounceSync } from './sync.js';
+import { markDirty } from './sync.js';
 
 
 let currentDay = 'Monday';
@@ -52,7 +51,7 @@ export function switchDay(day) {
 export function addPeriod() {
     periodsData[currentDay].push({ id: null, name: '' });
     renderPeriods();
-    triggerAutoSave();
+    onTimetableChange();
 }
 
 export function renderPeriods() {
@@ -112,10 +111,12 @@ export function renderPeriods() {
 function deletePeriod(index) {
     periodsData[currentDay].splice(index, 1);
     renderPeriods();
-    triggerAutoSave();
+    onTimetableChange();
 }
 
 function showSubjectPicker(anchor, index) {
+    document.body.classList.add('timetable-editing');
+
     // Remove any existing pickers
     const existing = document.querySelector('.subject-picker-overlay');
     if (existing) existing.remove();
@@ -144,6 +145,7 @@ function showSubjectPicker(anchor, index) {
             e.stopPropagation();
             assignSubjectToPeriod(index, s.subject_id, s.subject_name);
             picker.remove();
+            document.body.classList.remove('timetable-editing');
         };
         list.appendChild(item);
     });
@@ -152,15 +154,21 @@ function showSubjectPicker(anchor, index) {
     const closeBtn = document.createElement('div');
     closeBtn.className = 'picker-item close-item';
     closeBtn.textContent = 'Cancel';
-    closeBtn.onclick = () => picker.remove();
+    closeBtn.onclick = () => {
+        picker.remove();
+        document.body.classList.remove('timetable-editing');
+    };
     list.appendChild(closeBtn);
 
     picker.appendChild(list);
     document.body.appendChild(picker);
-    
-    // Handle click outside
+
+    // Handle click outside / close
     picker.onclick = (e) => {
-        if (e.target === picker) picker.remove();
+        if (e.target === picker) {
+            picker.remove();
+            document.body.classList.remove('timetable-editing');
+        }
     };
 }
 
@@ -170,35 +178,22 @@ function assignSubjectToPeriod(index, subjectId, subjectName) {
         name: subjectName
     };
     renderPeriods();
-    triggerAutoSave();
+    onTimetableChange();
 }
 
 
 
-function triggerAutoSave() {
-    const userId = getUserId();
-    
-    // DELTA CHECK
-    const lastSaved = Storage.get(userId, 'timetable_last_saved');
-    if (JSON.stringify(periodsData) === JSON.stringify(lastSaved)) return;
-
-    // OPTIMISTIC UPDATE
-    const dashboardCache = Storage.get(userId, 'dashboard');
-    if (dashboardCache) {
-        // Normalize keys to lowercase to match server format
+function onTimetableChange() {
+    // Optimistic UI update for dashboard rendering (no cache persistence)
+    if (window.refreshDashboard) {
         const normalizedTimetable = {};
         for (const day in periodsData) {
             normalizedTimetable[day.toLowerCase()] = JSON.parse(JSON.stringify(periodsData[day]));
         }
-        dashboardCache.timetable = normalizedTimetable;
-        Storage.save(userId, 'dashboard', dashboardCache);
-        if (window.refreshDashboard) window.refreshDashboard(dashboardCache, ['timetable']);
+        window.refreshDashboard({ subjects: null, overall: null, timetable: normalizedTimetable, user: null }, ['timetable']);
     }
 
-    debounceSync('timetable', async () => {
-        await saveTimetableApi(periodsData);
-        Storage.save(userId, 'timetable_last_saved', periodsData);
-    }, 4000);
+    markDirty('timetable');
 }
 
 export function renderTimetableOverview() {

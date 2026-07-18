@@ -1,6 +1,5 @@
 import { updateProfileApi, requestPasswordOTPApi, changePasswordWithOTPApi } from './api.js';
 import { getUserId, showToast } from './utils.js';
-import { Storage } from './storage.js';
 
 export async function saveProfile() {
     const userId = getUserId();
@@ -27,11 +26,11 @@ export async function saveProfile() {
     const originalText = saveBtn.textContent;
 
     // OPTIMISTIC UPDATE
-    const originalCache = Storage.get(userId, 'dashboard');
+    const originalCache = window.latestDashboardData || null;
     if (originalCache) {
         const updatedCache = { ...originalCache };
         if (updatedCache.user) updatedCache.user.name = newName;
-        Storage.save(userId, 'dashboard', updatedCache);
+        window.latestDashboardData = updatedCache;
         // Instant UI update
         document.querySelectorAll('.profile-name').forEach(el => el.textContent = newName);
     }
@@ -46,7 +45,7 @@ export async function saveProfile() {
     } catch (err) {
         // Revert on error
         if (originalCache) {
-            Storage.save(userId, 'dashboard', originalCache);
+            window.latestDashboardData = originalCache;
             document.querySelectorAll('.profile-name').forEach(el => el.textContent = originalCache.user.name);
         }
         await window.customAlert(err.message || "Error updating profile", "Error", "❌");
@@ -124,10 +123,10 @@ export async function confirmChangeEmail(btn) {
         showToast("Email updated successfully!");
         
         // Update local cache and display
-        const dashboardCache = Storage.get(userId, 'dashboard');
+        const dashboardCache = window.latestDashboardData || null;
         if (dashboardCache && dashboardCache.user) {
             dashboardCache.user.email = newEmail;
-            Storage.save(userId, 'dashboard', dashboardCache);
+            window.latestDashboardData = dashboardCache;
         }
         
         const emailDisplay = document.getElementById('profile-email-display');
