@@ -1,7 +1,6 @@
 import { db } from "../db/db.js";
 import { users, subjects } from "../db/schema.js";
 import { eq, and, inArray } from "drizzle-orm";
-import { clearUserCache } from "./attendance.services.js";
  
 export async function getUserByName(name) {
   console.log("GET service hit");
@@ -33,8 +32,6 @@ export async function createUserService(name, email, password) {
 }
 
 export async function saveSubjectsService(userId, subjectList) {
-  clearUserCache(userId);
-
   return await db.transaction(async (tx) => {
     const existingSubjects = await tx.select().from(subjects).where(eq(subjects.userId, parseInt(userId)));
     const existingIds = existingSubjects.map(s => s.id);

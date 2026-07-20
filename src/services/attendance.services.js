@@ -3,11 +3,7 @@ import { sql, eq, inArray } from "drizzle-orm";
 import { timetable, attendanceLogs } from "../db/schema.js";
 import { getUserById } from "./users.services.js";
  
-const cache = new Map();
-
 export async function getDashboardData(userId) {
-  if (cache.has(userId)) return cache.get(userId);
-
   const [stats, tt, userResults] = await Promise.all([
     getSubjectStatsInternal(userId),
     getTimetableInternal(userId),
@@ -17,13 +13,7 @@ export async function getDashboardData(userId) {
   const user = userResults?.[0] || null;
   const overall = calculateOverall(stats);
 
-  const data = { subjects: stats, overall, timetable: tt, user };
-  cache.set(userId, data);
-  return data;
-}
-
-export function clearUserCache(userId) {
-  cache.delete(String(userId));
+  return { subjects: stats, overall, timetable: tt, user };
 }
 
 function calculateOverall(subjects) {
@@ -112,7 +102,6 @@ async function getTimetableInternal(userId) {
 }
 
 export async function saveTimetableService(userId, timetableData) {
-  clearUserCache(userId);
   const uId = parseInt(userId);
 
   return await db.transaction(async (tx) => {
@@ -172,7 +161,6 @@ export async function getMonthlyLogs(userId, year, month) {
 }
 
 export async function saveAttendanceLogsService(userId, logs) {
-  clearUserCache(userId);
   const uId = parseInt(userId);
 
   return await db.transaction(async (tx) => {

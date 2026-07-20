@@ -1,5 +1,4 @@
 import { getUserByName, createUserService, getUserByEmail, saveSubjectsService, getUserById, updateUser, updateUserPasswordService } from "../services/users.services.js";
-import { clearUserCache } from "../services/attendance.services.js";
 import { sendEmailChangeNotification, sendPasswordChangeEmail, sendPasswordOTPEmail, sendSignupOTPEmail, sendWelcomeEmail } from "../services/email.services.js";
 import { logger } from "../utils/logger.js";
 import bcrypt from 'bcryptjs';
@@ -331,8 +330,6 @@ export async function updateUserProfile(req, res, next) {
     if (!updatedUsers || updatedUsers.length === 0) {
       return res.status(500).json({ message: "Failed to update user profile" });
     }
-    
-    clearUserCache(id);
 
     // Send email notification if email was updated
     if (email) {
