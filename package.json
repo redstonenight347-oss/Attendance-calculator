@@ -11,12 +11,16 @@
     "pg": "^8.20.0"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.10"
+    "@tailwindcss/cli": "^4.3.3",
+    "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4.3.3"
   },
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
     "dev": "tsx src/server.js",
-    "seed": "tsx src/db/seeds/seed.js"
+    "seed": "tsx src/db/seeds/seed.js",
+    "build:css": "npx @tailwindcss/cli -i src/frontend/styles.css -o public/tailwind.css --minify",
+    "watch:css": "npx @tailwindcss/cli -i src/frontend/styles.css -o public/tailwind.css --watch"
   }
 }

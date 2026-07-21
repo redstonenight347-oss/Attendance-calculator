@@ -20,7 +20,7 @@ Designed with a **premium dark aesthetic**, **offline-resilient background synci
 ## 🛠️ Technology Stack
 
 ### Frontend (Client-Side)
-*   **HTML5 & CSS3**: Custom responsive grids, glassmorphism layouts, Google Fonts (Outfit & Inter), custom-tailored HSL color models, and custom micro-animations. (No Tailwind dependencies).
+*   **HTML5, CSS3 & Tailwind CSS**: Custom responsive design coexists with Tailwind CSS utility classes. The original stylesheet remains as a compatibility layer while the UI is redesigned incrementally.
 *   **Vanilla ES6+ JavaScript**: Structured modular design using modern ES Modules (`import`/`export`).
 *   **Local Cache Layer**: Resilient client-side fallback storage managing local state.
 
@@ -39,7 +39,8 @@ Designed with a **premium dark aesthetic**, **offline-resilient background synci
 ├── public/                     # Frontend client codebase
 │   ├── index.html              # Landing page (Sign-Up / Sign-In)
 │   ├── dashboard.html          # Core workspace layout
-│   ├── index.css               # Unified styling and responsive variables
+│   ├── style.css               # Original custom stylesheet (compatibility layer)
+│   ├── tailwind.css            # Generated Tailwind CSS output (rebuild with npm run build:css)
 │   ├── dashboard.js            # Main dashboard setup and layout orchestrator
 │   └── modules/                # Specialized ES frontend modules
 │       ├── api.js              # Fetch requests to secure API endpoints
@@ -52,6 +53,8 @@ Designed with a **premium dark aesthetic**, **offline-resilient background synci
 │       └── utils.js            # General UI helpers and custom toast alerts
 │
 ├── src/                        # Backend server codebase
+│   ├── frontend/               # Tailwind CSS source and theme configuration
+│   │   └── styles.css          # Tailwind source that imports public/style.css
 │   ├── server.js               # Entrypoint (dynamic port allocation)
 │   ├── app.js                  # Middlewares (Helmet CSP, limiters, JSON sizes)
 │   ├── controllers/            # Maps HTTP requests to services
@@ -95,7 +98,19 @@ Open your terminal inside the project root folder and run:
 npm install
 ```
 
-### 3. Configure the Environment variables
+### 3. Build the CSS
+Tailwind CSS is now integrated. The generated stylesheet lives at `public/tailwind.css`.
+
+*   For **one-time production build**:
+    ```bash
+    npm run build:css
+    ```
+*   For **development with live CSS reloading**:
+    ```bash
+    npm run watch:css
+    ```
+
+### 4. Configure the Environment variables
 Create a `.env` file in the root folder of the project and populate it with your credentials:
 ```env
 DATABASE_URL=postgresql://user:password@endpoint-pooler.aws.neon.tech/neondb?sslmode=require
@@ -104,20 +119,20 @@ EMAIL_USER=your-nodemailer-smtp-auth-email@gmail.com
 EMAIL_PASS=your-secure-app-password
 ```
 
-### 4. Push Database Schema Configurations
+### 5. Push Database Schema Configurations
 We use Drizzle Kit to automatically synchronize tables and indexes with the database. Synchronize your schema instantly by running:
 ```bash
 npx drizzle-kit push
 ```
 
-### 5. Seed the Database (Optional)
+### 6. Seed the Database (Optional)
 To instantly populate your local development environment with a demo student user, a preconfigured timetable, subjects, and mock attendance history:
 ```bash
 npm run seed
 ```
 > 💡 **Developer Note:** The seeder is fully **idempotent**. Every time you run `npm run seed`, it cleanly purges previous test user logs using database cascade configurations, hashes the seeded password, and creates a fresh test suite. You can run it repeatedly without generating database clutter!
 
-### 6. Start the Server
+### 7. Start the Server
 *   For **Development** (starts up the server using `tsx` for live tracking):
     ```bash
     npm run dev

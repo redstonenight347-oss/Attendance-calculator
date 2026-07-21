@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/*
+  Tailwind CSS source for the AttendanceCalculator frontend.
+  This file maps the existing CSS variables to a Tailwind v4 theme and keeps
+  a compatibility layer for the classes the vanilla JS creates at runtime.
+  Run `npm run build:css` or `npm run watch:css` to regenerate public/tailwind.css.
+*/
+
+/* Custom dark mode variant tied to the existing .dark-theme class */
+@custom-variant dark (&:where(.dark-theme, .dark-theme *));
+
+@theme {
+  /* Color tokens mapped from the existing CSS variables */
+  --color-bg: var(--bg-color);
+  --color-container: var(--container-bg);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-heading: var(--heading-color);
+  --color-subheading: var(--subheading-color);
+  --color-border: var(--border-color);
+  --color-input-bg: var(--input-bg);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-item-hover: var(--sidebar-item-hover);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-primary: var(--primary-color);
+  --color-primary-hover: var(--primary-hover);
+  --color-success: var(--success-color);
+  --color-danger: var(--danger-color);
+  --color-warning: var(--warning-color);
+  --color-muted: var(--muted-color);
+
+  /* Shadows */
+  --shadow-card: var(--shadow);
+
+  /* Fonts */
+  --font-sans: Arial, sans-serif;
+}
+
+/*
+  Compatibility layer: import the original stylesheet so every existing class
+  and CSS variable continues to work while you migrate the markup to Tailwind
+  utility classes.
+*/
+@import "../../public/style.css";
