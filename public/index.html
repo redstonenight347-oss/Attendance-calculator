@@ -5,94 +5,512 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance Calculator</title>
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="tailwind.css">
-    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --orb-1-color: rgba(59, 130, 246, 0.2);
+            --orb-2-color: rgba(99, 102, 241, 0.2);
+            --card-bg: rgba(255, 255, 255, 0.65);
+            --card-border: rgba(255, 255, 255, 0.9);
+            --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.7);
+            --input-border: rgba(0, 0, 0, 0.08);
+            --input-text: #1e293b;
+            --input-placeholder: rgba(100, 116, 139, 0.7);
+            --input-focus-bg: rgba(255, 255, 255, 1);
+            --btn-bg: #2563eb;
+            --btn-hover: #3b82f6;
+            --btn-shadow: rgba(37, 99, 235, 0.2);
+            --link-color: #2563eb;
+            --link-hover: #3b82f6;
+            --text-muted: #64748b;
+            --heading-color: #0f172a;
+            --label-color: #334155;
+            --success-color: #10b981;
+            
+            /* Theme Toggle */
+            --toggle-bg: #e2e8f0;
+            --toggle-border: rgba(0, 0, 0, 0.05);
+            --toggle-thumb: white;
+            --toggle-thumb-border: rgba(0, 0, 0, 0.1);
+            
+            /* Password Eye Icon */
+            --eye-color: #64748b;
+            --eye-hover: #0f172a;
+        }
+
+        .dark-theme {
+            --bg-color: #091124;
+            --text-color: #f1f5f9;
+            --orb-1-color: rgba(37, 99, 235, 0.15);
+            --orb-2-color: rgba(79, 70, 229, 0.15);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            --input-bg: rgba(0, 0, 0, 0.2);
+            --input-border: rgba(255, 255, 255, 0.1);
+            --input-text: #f1f5f9;
+            --input-placeholder: rgba(148, 163, 184, 0.6);
+            --input-focus-bg: rgba(0, 0, 0, 0.4);
+            --btn-bg: #2563eb;
+            --btn-hover: #3b82f6;
+            --btn-shadow: rgba(37, 99, 235, 0.3);
+            --link-color: #60a5fa;
+            --link-hover: #93c5fd;
+            --text-muted: #94a3b8;
+            --heading-color: white;
+            --label-color: #cbd5e1;
+            --success-color: #34d399;
+            
+            /* Theme Toggle */
+            --toggle-bg: rgba(30, 41, 59, 0.8);
+            --toggle-border: rgba(255, 255, 255, 0.1);
+            --toggle-thumb: rgba(255, 255, 255, 0.9);
+            --toggle-thumb-border: rgba(255, 255, 255, 0.2);
+            
+            /* Password Eye Icon */
+            --eye-color: #94a3b8;
+            --eye-hover: #e2e8f0;
+        }
+
+        /* Base Body */
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+
+        /* Background Image */
+        .bg-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('images/Background.png');
+            background-size: cover;
+            background-position: center;
+            z-index: -20;
+        }
+        
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            opacity: 0.10; /* Tints the background image with the active theme color */
+            z-index: -15;
+            transition: background-color 0.4s ease;
+        }
+
+        /* Fix Chrome autofill background */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px var(--bg-color) inset !important;
+            -webkit-text-fill-color: var(--input-text) !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+        
+        /* Error text used by script.js */
+        .error-text {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+        
+        /* Custom Theme Toggle positioned top-right */
+        .custom-theme-toggle {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 50;
+        }
+        
+        .toggle-label {
+            display: inline-flex;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .toggle-track {
+            width: 56px;
+            height: 32px;
+            background-color: var(--toggle-bg);
+            border: 1px solid var(--toggle-border);
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px;
+            transition: background-color 0.4s ease, border-color 0.4s ease;
+        }
+        
+        .toggle-track span {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .toggle-thumb {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: 24px;
+            height: 24px;
+            background-color: var(--toggle-thumb);
+            border: 1px solid var(--toggle-thumb-border);
+            border-radius: 50%;
+            transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1), background-color 0.4s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        
+        #theme-toggle:checked ~ .toggle-thumb {
+            transform: translateX(24px);
+        }
+
+        /* Ambient Background */
+        .ambient-orb-1 {
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background-color: var(--orb-1-color);
+            filter: blur(120px);
+            transition: background-color 0.5s ease;
+        }
+        
+        .ambient-orb-2 {
+            position: absolute;
+            bottom: -10%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            border-radius: 50%;
+            background-color: var(--orb-2-color);
+            filter: blur(100px);
+            transition: background-color 0.5s ease;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-card {
+            background-color: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
+            transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+        }
+        
+        .glass-input {
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
+            color: var(--input-text);
+            transition: all 0.3s ease;
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+        }
+        
+        .glass-input::placeholder {
+            color: var(--input-placeholder);
+        }
+        
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(59, 130, 246, 0.5); /* blue-500 */
+            background-color: var(--input-focus-bg);
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5);
+        }
+        
+        .primary-btn {
+            background-color: var(--btn-bg);
+            color: white;
+            border-radius: 9999px;
+            padding: 14px 24px;
+            width: 100%;
+            font-weight: 600;
+            box-shadow: 0 0 20px var(--btn-shadow);
+            transition: all 0.2s ease;
+            margin-top: 16px;
+        }
+        
+        .primary-btn:hover {
+            background-color: var(--btn-hover);
+        }
+        
+        .primary-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .link-text {
+            color: var(--link-color);
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .link-text:hover {
+            color: var(--link-hover);
+        }
+
+        .heading-text {
+            color: var(--heading-color);
+            transition: color 0.4s ease;
+        }
+
+        .label-text {
+            color: var(--label-color);
+            transition: color 0.4s ease;
+        }
+
+        .muted-text {
+            color: var(--text-muted);
+            transition: color 0.4s ease;
+        }
+
+        .success-text {
+            color: var(--success-color);
+            transition: color 0.4s ease;
+        }
+
+        .eye-icon {
+            color: var(--eye-color);
+            transition: color 0.2s ease;
+            margin-top: -5px;
+            margin-left: 4px;
+        }
+
+        .eye-icon:hover {
+            color: var(--eye-hover);
+        }
+        
+        /* Layout utilities */
+        .flex-center { display: flex; align-items: center; justify-content: center; }
+        .flex-col { display: flex; flex-direction: column; }
+        .relative { position: relative; }
+        .absolute { position: absolute; }
+        .w-full { width: 100%; }
+        .min-h-screen { min-height: 100vh; }
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-6 { margin-bottom: 24px; }
+        .mb-8 { margin-bottom: 32px; }
+        .mt-4 { margin-top: 16px; }
+        .pt-4 { padding-top: 16px; }
+        .pt-6 { padding-top: 24px; }
+        .pt-2 { padding-top: 8px; }
+        .gap-3 { gap: 12px; }
+        .space-y-5 > * + * { margin-top: 20px; }
+        .space-y-6 > * + * { margin-top: 24px; }
+        .block { display: block; }
+        .text-sm { font-size: 0.875rem; }
+        .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+        .font-bold { font-weight: 700; }
+        .font-medium { font-weight: 500; }
+    </style>
 </head>
-<body class="auth-page">
-    <div style="position: absolute; top: 20px; right: 20px;" class="theme-toggle-container">
-        <span style="margin-right: 8px;">Dark Mode</span>
-        <label class="switch">
-            <input type="checkbox" id="theme-toggle">
-            <span class="slider"></span>
+<body class="overflow-x-hidden font-sans antialiased relative min-h-screen">
+
+    <!-- Background Image -->
+    <div class="bg-image"></div>
+    <div class="bg-overlay"></div>
+    <!-- Ambient background orbs -->
+    <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div class="ambient-orb-1"></div>
+        <div class="ambient-orb-2"></div>
+    </div>
+
+    <!-- Custom Theme toggle -->
+    <div class="custom-theme-toggle">
+        <label class="toggle-label">
+            <input type="checkbox" id="theme-toggle" class="sr-only" style="display: none;">
+            <div class="toggle-track">
+                <!-- Sun SVG for Light Mode -->
+                <span style="padding-left: 2px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:12px; height:12px; color:#f59e0b;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                    </svg>
+                </span>
+                <!-- Moon SVG for Dark Mode -->
+                <span style="padding-right: 2px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width:12px; height:12px; color:#64748b;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                    </svg>
+                </span>
+            </div>
+            <div class="toggle-thumb"></div>
         </label>
     </div>
-    <div class="section-container" id="signin-section">
-        <h2>Log In</h2>
-        <input id="signin-email" type="text" placeholder="Email" autocomplete="username">
-        <div style="position: relative; width: 100%; margin-bottom: 15px;">
-            <input id="signin-password" type="text" placeholder="Password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="current-password">
-            <span id="signin-password-toggle" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
-        </div>
-        <br>
-        <button type="button" id="signin-btn">Log In</button>
-        <div style="display: flex; justify-content: space-between; margin-top: 15px; font-size: 0.9rem; flex-wrap: wrap; gap: 10px;">
-            <span class="toggle-link auth-toggle-link" style="margin: 0;">Don't have an account? Sign Up</span>
-            <span class="toggle-link" id="forgot-password-link" style="margin: 0; color: #3b82f6;">Forgot Password?</span>
-        </div>
-        <div id="signin-output"></div> 
-    </div>
 
-    <div class="section-container hidden" id="forgot-password-section">
-        <h2>Reset Password</h2>
-        
-        <!-- Step 1: Send OTP -->
-        <div id="forgot-step-1" style="display: block;">
-            <p style="margin-bottom: 15px; font-size: 0.9rem; color: var(--text-secondary);">We will send a 6-digit OTP to your email to verify your identity.</p>
-            <input id="forgot-email" type="email" placeholder="Registered Email ID" autocomplete="email">
-            <button type="button" id="forgot-otp-btn">Send OTP</button>
-        </div>
-
-        <!-- Step 2: Verify and Reset -->
-        <div id="forgot-step-2" style="display: none;">
-            <p style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 500; color: #4ade80;">OTP sent successfully! Check your inbox.</p>
+    <!-- Main container -->
+    <main class="min-h-screen w-full flex-center px-4 py-12">
+        <!-- Auth card (Glassmorphism) -->
+        <section class="w-full max-w-md glass-card rounded-2xl p-8 sm:p-10 relative overflow-hidden">
             
-            <label style="display:block; margin-bottom:5px; text-align: left; font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">Enter OTP</label>
-            <input id="forgot-otp-input" type="text" placeholder="6-digit" style="width: 150px; padding: 12px; border-radius: 5px; border: 1px solid var(--border-color); text-align: center; font-size: 1.1rem; letter-spacing: 2px; font-weight: bold; background-color: var(--input-bg); color: var(--text-primary); margin-bottom: 15px; display: block;" maxlength="6">
-            
-            <label style="display:block; margin-bottom:5px; text-align: left; font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">New Password <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: normal; margin-left: 5px;">(6 characters minimum)</span></label>
-            <div style="position: relative; width: 100%; margin-bottom: 15px;">
-                <input id="forgot-new-password" type="text" placeholder="Enter new password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="new-password">
-                <span id="forgot-new-password-toggle" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
-            </div>
-            <button type="button" id="forgot-reset-btn">Confirm Reset</button>
-        </div>
+            <!-- Subtle highlight on top edge of card -->
+            <div class="absolute top-0 left-0 w-full h-px bg-linear-to-r from-transparent via-blue-400/30 to-transparent"></div>
 
-        <span class="toggle-link" id="back-to-signin-link" style="display: block; margin-top: 15px; text-align: center;">Back to Log In</span>
-        <div id="forgot-output"></div>
-    </div>
+            <!-- Sign In -->
+            <div id="signin-section" class="space-y-6">
+                <h2 class="text-3xl font-bold text-center mb-8 tracking-tight heading-text">Log In</h2>
 
-    <div class="section-container hidden" id="signup-section">
-        <h2>Sign Up</h2>
-        
-        <!-- Step 1: Input details -->
-        <div id="signup-step-1" style="display: block;">
-            <input id="signup-name" type="text" placeholder="Full Name" autocomplete="name">
-            <input id="signup-email" type="text" placeholder="Email" autocomplete="email">
-            <div style="position: relative; width: 100%; margin-bottom: 15px;">
-                <input id="signup-password" type="text" placeholder="Password" style="width: calc(100% - 54px); padding-right: 40px; margin-bottom: 0;" autocomplete="new-password">
-                <span id="signup-password-toggle" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; font-size: 1.1rem; line-height: 0; display: inline-flex; align-items: center; justify-content: center;" title="Toggle Password">👁️</span>
-            </div>
-            <br>
-            <button type="button" id="signup-btn">Request Verification Code</button>
-        </div>
+                <div class="space-y-5">
+                    <div>
+                        <label for="signin-email" class="block text-sm font-medium mb-2 label-text">Email</label>
+                        <input id="signin-email" type="email" placeholder="Email" autocomplete="username" class="glass-input">
+                    </div>
 
-        <!-- Step 2: Input OTP -->
-        <div id="signup-step-2" style="display: none;">
-            <p style="margin-bottom: 15px; font-size: 0.95rem; font-weight: 500; color: #4ade80;">Verification OTP sent successfully! Check your email inbox.</p>
-            
-            <div style="background-color: rgba(245, 158, 11, 0.15); border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; text-align: left; font-size: 0.85rem; line-height: 1.5; color: var(--text-secondary); box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                <strong>📧 Can't find the email?</strong> Check your <strong>Spam or Junk</strong> folder. If you find it there, please mark it as <strong>"Not Spam"</strong> so you don't miss future notifications!
+                    <div>
+                        <label for="signin-password" class="block text-sm font-medium mb-2 label-text">Password</label>
+                        <div class="relative">
+                            <input id="signin-password" type="password" placeholder="Password" autocomplete="current-password" class="glass-input pr-11" style="padding-right: 2.75rem;">
+                            <span id="signin-password-toggle" class="absolute right-4 top-1/2 -translate-y-1/2 eye-icon cursor-pointer select-none" title="Toggle Password">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" id="signin-btn" class="primary-btn">
+                    Log In
+                </button>
+
+                <div class="flex-col flex-center gap-3 pt-6 text-sm">
+                    <div class="muted-text">
+                        Don't have an account? <span class="auth-toggle-link link-text">Sign Up</span>
+                    </div>
+                    <span id="forgot-password-link" class="link-text">Forgot Password?</span>
+                </div>
+
+                <div id="signin-output" class="text-sm text-center"></div>
             </div>
 
-            <label style="display:block; margin-bottom:5px; text-align: left; font-size: 0.95rem; font-weight: 600; color: var(--text-primary);">Enter OTP Code</label>
-            <input id="signup-otp-input" type="text" placeholder="6-digit OTP" style="width: 160px; padding: 12px; border-radius: 5px; border: 1px solid var(--border-color); text-align: center; font-size: 1.1rem; letter-spacing: 2px; font-weight: bold; background-color: var(--input-bg); color: var(--text-primary); margin-bottom: 15px; display: block;" maxlength="6">
-            <button type="button" id="signup-verify-btn">Verify & Sign Up</button>
-            <span class="toggle-link" id="signup-back-link" style="display: block; margin-top: 15px; text-align: center;">Change registration details</span>
-        </div>
+            <!-- Forgot Password -->
+            <div id="forgot-password-section" class="hidden space-y-6">
+                <h2 class="text-3xl font-bold text-center mb-2 tracking-tight heading-text">Reset Password</h2>
+                <p class="text-sm text-center mb-6 muted-text">We'll send a 6-digit OTP to your email.</p>
 
-        <span class="toggle-link auth-toggle-link" id="signup-login-toggle" style="margin-top: 15px;">Already have an account? Log In</span>
-        <div id="signup-output"></div> 
-    </div>
+                <div id="forgot-step-1" class="space-y-5">
+                    <div>
+                        <label for="forgot-email" class="block text-sm font-medium mb-2 label-text">Registered Email ID</label>
+                        <input id="forgot-email" type="email" placeholder="Email" autocomplete="email" class="glass-input">
+                    </div>
+                    <button type="button" id="forgot-otp-btn" class="primary-btn">
+                        Send OTP
+                    </button>
+                </div>
+
+                <div id="forgot-step-2" class="hidden space-y-5">
+                    <p class="text-sm font-medium text-center success-text">OTP sent! Check your inbox.</p>
+
+                    <div>
+                        <label for="forgot-otp-input" class="block text-sm font-medium mb-2 label-text">Enter OTP</label>
+                        <input id="forgot-otp-input" type="text" placeholder="000000" maxlength="6"
+                            class="glass-input text-center font-bold" style="letter-spacing: 0.25em;">
+                    </div>
+
+                    <div>
+                        <label for="forgot-new-password" class="block text-sm font-medium mb-2 label-text">
+                            New Password
+                        </label>
+                        <div class="relative">
+                            <input id="forgot-new-password" type="password" placeholder="••••••••" autocomplete="new-password" class="glass-input pr-11" style="padding-right: 2.75rem;">
+                            <span id="forgot-new-password-toggle" class="absolute right-4 top-1/2 -translate-y-1/2 eye-icon cursor-pointer select-none" title="Toggle Password">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+
+                    <button type="button" id="forgot-reset-btn" class="primary-btn">
+                        Confirm Reset
+                    </button>
+                </div>
+
+                <div class="text-center pt-4">
+                    <span id="back-to-signin-link" class="link-text text-sm">Back to Log In</span>
+                </div>
+                <div id="forgot-output" class="text-sm text-center"></div>
+            </div>
+
+            <!-- Sign Up -->
+            <div id="signup-section" class="hidden space-y-6">
+                <h2 class="text-3xl font-bold text-center mb-8 tracking-tight heading-text">Sign Up</h2>
+
+                <div id="signup-step-1" class="space-y-5">
+                    <div>
+                        <label for="signup-name" class="block text-sm font-medium mb-2 label-text">Full Name</label>
+                        <input id="signup-name" type="text" placeholder="Name" autocomplete="name" class="glass-input">
+                    </div>
+                    <div>
+                        <label for="signup-email" class="block text-sm font-medium mb-2 label-text">Email</label>
+                        <input id="signup-email" type="email" placeholder="Email" autocomplete="email" class="glass-input">
+                    </div>
+                    <div>
+                        <label for="signup-password" class="block text-sm font-medium mb-2 label-text">Password</label>
+                        <div class="relative">
+                            <input id="signup-password" type="password" placeholder="••••••••" autocomplete="new-password" class="glass-input pr-11" style="padding-right: 2.75rem;">
+                            <span id="signup-password-toggle" class="absolute right-4 top-1/2 -translate-y-1/2 eye-icon cursor-pointer select-none" title="Toggle Password">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width: 20px; height: 20px;">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="button" id="signup-btn" class="primary-btn">
+                        Sign Up
+                    </button>
+                </div>
+
+                <div id="signup-step-2" class="hidden space-y-5">
+                    <p class="text-sm font-medium text-center success-text">OTP sent! Check your inbox.</p>
+
+                    <div>
+                        <label for="signup-otp-input" class="block text-sm font-medium mb-2 label-text">Enter OTP</label>
+                        <input id="signup-otp-input" type="text" placeholder="000000" maxlength="6"
+                            class="glass-input text-center font-bold" style="letter-spacing: 0.25em;">
+                    </div>
+
+                    <button type="button" id="signup-verify-btn" class="primary-btn">
+                        Verify & Sign Up
+                    </button>
+
+                    <div class="text-center pt-2">
+                        <span id="signup-back-link" class="link-text text-sm">Change details</span>
+                    </div>
+                </div>
+
+                <div class="text-center text-sm pt-6">
+                    <span class="muted-text">Already have an account? </span>
+                    <span id="signup-login-toggle" class="auth-toggle-link link-text">Log In</span>
+                </div>
+                <div id="signup-output" class="text-sm text-center"></div>
+            </div>
+
+        </section>
+    </main>
 
     <script src="custom-alert.js"></script>
     <script src="script.js"></script>
