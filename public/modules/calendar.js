@@ -357,7 +357,7 @@ export function renderDayAttendance() {
         slot.innerHTML = `
             <div class="slot-content">
                 <span class="slot-subject-name">${subject.name}</span>
-                <div class="slot-status-badge status-${status}">${status === 'pending' ? '⚠️ pending' : status}</div>
+                <div class="slot-status-badge status-${status}">${status}</div>
             </div>
             ${overlayHtml}
         `;
@@ -380,7 +380,7 @@ export function renderDayAttendance() {
                 if (!startMarkerStr) {
                     promptForStartMarker();
                 } else if (window.customAlert) {
-                    window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+                    window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'info');
                 }
             };
         }
@@ -442,7 +442,7 @@ function renderExtraClasses(selectedDateStr, slotsWrapper, claimedLogIds = new S
                     if (!startMarkerStr) {
                         promptForStartMarker();
                     } else if (window.customAlert) {
-                        window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+                        window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'info');
                     }
                 };
             }
@@ -506,7 +506,7 @@ export async function markWholeDay(status) {
         const selectedDateObj = new Date(selectedDate);
         selectedDateObj.setHours(0,0,0,0);
         if (selectedDateObj < startMarkerDate) {
-            if (window.customAlert) window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+            if (window.customAlert) window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'info');
             return;
         }
     }
@@ -580,7 +580,7 @@ export function openExtraClassModal() {
         const selectedDateObj = new Date(selectedDate);
         selectedDateObj.setHours(0,0,0,0);
         if (selectedDateObj < startMarkerDate) {
-            if (window.customAlert) window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'ℹ️');
+            if (window.customAlert) window.customAlert('Cannot edit attendance before the start marker.', 'Info', 'info');
             return;
         }
     }
@@ -683,7 +683,7 @@ export async function promptForStartMarker(customMessage = 'Please set a Start M
         const action = await window.customConfirm(
             customMessage,
             'Action Required',
-            '⚠️',
+            'warning',
             'How to Set',
             'Set Marker'
         );
@@ -728,7 +728,7 @@ export async function promptForStartMarker(customMessage = 'Please set a Start M
             }, 250);
         }
     } else if (window.customAlert) {
-        await window.customAlert(customMessage, 'Action Required', '⚠️');
+        await window.customAlert(customMessage, 'Action Required', 'warning');
         
         // Default to navigating to the attendance section and highlighting the marker button
         const attLink = document.querySelector('a[data-section="attendance-section"]');

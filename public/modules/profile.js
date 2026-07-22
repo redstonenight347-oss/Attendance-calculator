@@ -6,19 +6,19 @@ export async function saveProfile() {
     const nameInput = document.getElementById('profile-name-input');
     
     if (!nameInput || !userId) {
-        await window.customAlert("User information missing. Please reload.", "Error", "❌");
+        await window.customAlert("User information missing. Please reload.", "Error", "error");
         return;
     }
     
     const newName = nameInput.value.trim();
     
     if (newName === window.cachedProfileName) {
-        await window.customAlert("No changes detected in your profile name.", "Info", "ℹ️");
+        await window.customAlert("No changes detected in your profile name.", "Info", "info");
         return;
     }
 
     if (!newName) {
-        await window.customAlert("Name cannot be empty", "Error", "❌");
+        await window.customAlert("Name cannot be empty", "Error", "error");
         return;
     }
 
@@ -48,7 +48,7 @@ export async function saveProfile() {
             window.latestDashboardData = originalCache;
             document.querySelectorAll('.profile-name').forEach(el => el.textContent = originalCache.user.name);
         }
-        await window.customAlert(err.message || "Error updating profile", "Error", "❌");
+        await window.customAlert(err.message || "Error updating profile", "Error", "error");
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = originalText;
@@ -103,13 +103,13 @@ export async function confirmChangeEmail(btn) {
     const newEmail = input.value.trim();
     
     if (!newEmail) {
-        await window.customAlert("Email cannot be empty", "Error", "❌");
+        await window.customAlert("Email cannot be empty", "Error", "error");
         return;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEmail)) {
-        await window.customAlert("Please enter a valid email address", "Error", "❌");
+        await window.customAlert("Please enter a valid email address", "Error", "error");
         return;
     }
 
@@ -134,7 +134,7 @@ export async function confirmChangeEmail(btn) {
         
         closeChangeEmailModal();
     } catch (err) {
-        await window.customAlert(err.message || "Error updating email", "Error", "❌");
+        await window.customAlert(err.message || "Error updating email", "Error", "error");
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -152,7 +152,7 @@ window.copyUserId = copyUserId;
 export function openChangePasswordModal() {
     const emailDisplay = document.getElementById('profile-email-display');
     if (!emailDisplay || !emailDisplay.textContent || emailDisplay.textContent === 'Loading...' || !emailDisplay.textContent.includes('@')) {
-        window.customAlert("Please add an email address first to use this feature.", "Error", "❌");
+        window.customAlert("Please add an email address first to use this feature.", "Error", "error");
         return;
     }
 
@@ -192,7 +192,7 @@ export async function requestPasswordOTP(btn) {
         document.getElementById('password-step-2').style.display = 'block';
         document.getElementById('password-otp-input').focus();
     } catch (err) {
-        await window.customAlert(err.message || "Failed to send OTP", "Error", "❌");
+        await window.customAlert(err.message || "Failed to send OTP", "Error", "error");
         if (btn) {
             btn.disabled = false;
             btn.textContent = "Send OTP";
@@ -206,12 +206,12 @@ export async function confirmChangePassword(btn) {
     const newPassword = document.getElementById('new-password-input').value.trim();
     
     if (!otp || !newPassword) {
-        await window.customAlert("OTP and New Password are required.", "Error", "❌");
+        await window.customAlert("OTP and New Password are required.", "Error", "error");
         return;
     }
     
     if (newPassword.length < 6) {
-        await window.customAlert("Password must be at least 6 characters.", "Error", "❌");
+        await window.customAlert("Password must be at least 6 characters.", "Error", "error");
         return;
     }
     
@@ -225,7 +225,7 @@ export async function confirmChangePassword(btn) {
         showToast("Password changed successfully!");
         closeChangePasswordModal();
     } catch (err) {
-        await window.customAlert(err.message || "Failed to change password", "Error", "❌");
+        await window.customAlert(err.message || "Failed to change password", "Error", "error");
         if (btn) {
             btn.disabled = false;
             btn.textContent = "Confirm Change";
