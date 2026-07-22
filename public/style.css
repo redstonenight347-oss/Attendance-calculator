@@ -1,40 +1,40 @@
 :root {
-    --bg-color: #f4f7f6;
-    --container-bg: #ffffff;
-    --text-primary: #333;
-    --text-secondary: #555;
-    --heading-color: #2c3e50;
-    --subheading-color: #34495e;
-    --border-color: #dcdcdc;
-    --input-bg: #ffffff;
-    --sidebar-bg: #ffffff;
-    --sidebar-item-hover: #f4f7f6;
-    --card-bg: #ffffff;
-    --card-border: #e1e8ed;
-    --primary-color: #3498db;
-    --primary-hover: #2980b9;
-    --success-color: #27ae60;
-    --danger-color: #e74c3c;
-    --warning-color: #e67e22;
-    --muted-color: #7f8c8d;
-    --shadow: 0 4px 6px rgba(0,0,0,0.05);
+    --bg-color: #f8fafc;
+    --container-bg: rgba(255, 255, 255, 0.7);
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --heading-color: #0f172a;
+    --subheading-color: #1e293b;
+    --border-color: rgba(226, 232, 240, 0.8);
+    --input-bg: rgba(255, 255, 255, 0.8);
+    --sidebar-bg: rgba(255, 255, 255, 0.75);
+    --sidebar-item-hover: rgba(241, 245, 249, 0.8);
+    --card-bg: rgba(255, 255, 255, 0.65);
+    --card-border: rgba(255, 255, 255, 0.8);
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --muted-color: #64748b;
+    --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
 }
 
 .dark-theme {
-    --bg-color: #0f172a;
-    --container-bg: #1e293b;
+    --bg-color: #090d16;
+    --container-bg: rgba(15, 23, 42, 0.55);
     --text-primary: #f8fafc;
     --text-secondary: #cbd5e1;
-    --heading-color: #f1f5f9;
+    --heading-color: #f8fafc;
     --subheading-color: #e2e8f0;
-    --border-color: #334155;
-    --input-bg: #1e293b;
-    --sidebar-bg: #0f172a;
-    --sidebar-item-hover: #1e293b;
-    --card-bg: #1e293b;
-    --card-border: #334155;
+    --border-color: rgba(255, 255, 255, 0.08);
+    --input-bg: rgba(15, 23, 42, 0.4);
+    --sidebar-bg: rgba(11, 17, 32, 0.75);
+    --sidebar-item-hover: rgba(30, 41, 59, 0.6);
+    --card-bg: rgba(15, 23, 42, 0.55);
+    --card-border: rgba(255, 255, 255, 0.08);
     --muted-color: #94a3b8;
-    --shadow: 0 4px 6px rgba(0,0,0,0.2);
+    --shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.4);
 }
 
 body {
